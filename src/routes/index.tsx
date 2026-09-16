@@ -1,6 +1,7 @@
 /**
  * لوحة معلومات وإحصائيات الموارد البشرية - Google Material Design 3
  * Enterprise HRMS Live Analytics Dashboard
+ * All numerals formatted using Western Arabic digits (1, 2, 3...)
  */
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -22,7 +23,7 @@ import {
 } from "recharts";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { AppShell } from "@/components/hr/AppShell";
-import { ar, money, useRows, type Row } from "@/lib/hr-db";
+import { useRows, type Row } from "@/lib/hr-db";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "لوحة تحكم الموارد البشرية: مؤشرات الموظفين، حضور اليوم، الطلبات المعلقة، وتوزيعات الأقسام والمستويات والجنسيات.",
+          "لوحة تحكم الموارد البشرية بنظام Google Material 3: مؤشرات الموظفين، حضور اليوم، الطلبات المعلقة، وتوزيعات الأقسام والمستويات والجنسيات.",
       },
       { property: "og:title", content: "لوحة معلومات الموارد البشرية" },
       {
@@ -45,17 +46,30 @@ export const Route = createFileRoute("/")({
   component: Dashboard,
 });
 
+/** Formats numbers using standard English/Western numerals (1, 2, 3...) with thousand separators */
+function num(n: number | string | null | undefined): string {
+  if (n === null || n === undefined || n === "") return "0";
+  const val = Number(n);
+  if (Number.isNaN(val)) return String(n);
+  return val.toLocaleString("en-US");
+}
+
+/** Formats money in SAR using English numerals */
+function numMoney(n: number | string | null | undefined): string {
+  return `${num(n)} ر.س`;
+}
+
 const palette = [
-  "#0b57d0",
-  "#00639b",
-  "#137333",
-  "#b06000",
-  "#6750a4",
-  "#ba1a1a",
-  "#0288d1",
-  "#7b1fa2",
-  "#388e3c",
-  "#f57c00",
+  "#0b57d0", // Google Blue Primary
+  "#00639b", // Deep Cyan
+  "#137333", // Material Green
+  "#b06000", // Material Amber
+  "#6750a4", // Material Purple / Tertiary
+  "#ba1a1a", // Material Red / Error
+  "#0288d1", // Light Blue
+  "#7b1fa2", // Violet
+  "#388e3c", // Forest Green
+  "#f57c00", // Orange
 ];
 
 const tones: Record<string, { bg: string; text: string; bar: string }> = {
@@ -85,21 +99,21 @@ function StatCard({
 }) {
   const currentTone = tones[tone] ?? tones.sky;
   const body = (
-    <article className="group relative h-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] transition-all hover:shadow-[0_4px_16px_0_rgba(60,64,67,0.12)] hover:-translate-y-0.5">
+    <article className="group relative h-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] transition-all duration-200 hover:shadow-[0_4px_20px_0_rgba(60,64,67,0.12)] hover:-translate-y-0.5">
       <span className={`absolute inset-x-0 top-0 h-1.5 ${currentTone.bar}`} />
       <div className="flex items-center justify-between">
         <span className={`grid size-11 place-items-center rounded-2xl ${currentTone.bg} ${currentTone.text} shadow-2xs`}>
           <MaterialIcon name={icon} size={22} filled />
         </span>
         {badge && (
-          <span className={`rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${currentTone.bg} ${currentTone.text}`}>
+          <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold ${currentTone.bg} ${currentTone.text}`}>
             {badge}
           </span>
         )}
       </div>
       <p className="mt-3.5 text-xs font-bold text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-black tracking-tight text-slate-900 font-mono">{value}</p>
-      <p className="mt-1 text-[11px] font-medium text-slate-400">{hint}</p>
+      <p className="mt-1 text-2xl md:text-3xl font-black tracking-tight text-slate-900 font-sans tabular-nums">{value}</p>
+      <p className="mt-1 text-[11.5px] font-medium text-slate-400">{hint}</p>
     </article>
   );
   return to ? (
@@ -139,7 +153,7 @@ function Panel({
         </h3>
         <div className="flex items-center gap-2">
           {badge && (
-            <span className="rounded-full bg-[#e8f0fe] px-3 py-1 text-[11px] font-bold text-[#0b57d0]">
+            <span className="rounded-full bg-[#e8f0fe] px-3 py-1 text-[11.5px] font-bold text-[#0b57d0] font-sans tabular-nums">
               {badge}
             </span>
           )}
@@ -154,7 +168,7 @@ function Panel({
 const tooltipStyle = {
   contentStyle: {
     borderRadius: 16,
-    border: "1px solid #c4c7c5",
+    border: "1px solid #e2e8f0",
     background: "#ffffff",
     boxShadow: "0 4px 16px 0 rgba(0,0,0,0.12)",
     fontFamily: "inherit",
@@ -172,9 +186,9 @@ const shift = (days: number) => {
 };
 
 const presets = [
-  { key: "7", label: "٧ أيام", days: 7 },
-  { key: "30", label: "٣٠ يوم", days: 30 },
-  { key: "90", label: "٩٠ يوم", days: 90 },
+  { key: "7", label: "7 أيام", days: 7 },
+  { key: "30", label: "30 يوم", days: 30 },
+  { key: "90", label: "90 يوم", days: 90 },
   { key: "365", label: "سنة", days: 365 },
 ];
 
@@ -521,7 +535,7 @@ function Dashboard() {
               <span className="size-2 rounded-full bg-emerald-600 animate-pulse" />
             </span>
             <span>
-              {new Date().toLocaleDateString("ar-SA", {
+              {new Date().toLocaleDateString("ar-SA-u-nu-latn", {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
@@ -566,7 +580,7 @@ function Dashboard() {
             <MaterialIcon name="schedule" size={19} className="text-[#0b57d0]" filled />
             مؤشرات حضور وانصراف اليوم بالأرقام المطلقة ({todayDate})
           </h2>
-          <span className="text-[11px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+          <span className="text-[11.5px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-full font-sans tabular-nums">
             نسبة الحضور اليومية: {todayAttendanceMetrics.rate}%
           </span>
         </div>
@@ -574,8 +588,8 @@ function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="حضور اليوم (الفعلي)"
-            value={`${ar(todayAttendanceMetrics.attended)} موظف`}
-            hint={`من إجمالي ${ar(activeEmployees.length)} موظف نشط في المنشأة`}
+            value={`${num(todayAttendanceMetrics.attended)} موظف`}
+            hint={`من إجمالي ${num(activeEmployees.length)} موظف نشط في المنشأة`}
             icon="how_to_reg"
             tone="teal"
             badge="مباشر اليوم"
@@ -583,7 +597,7 @@ function Dashboard() {
           />
           <StatCard
             label="غياب اليوم"
-            value={`${ar(todayAttendanceMetrics.absent)} موظف`}
+            value={`${num(todayAttendanceMetrics.absent)} موظف`}
             hint="الموظفون غير الحاضرين اليوم بدون إجازة"
             icon="person_off"
             tone="rose"
@@ -592,7 +606,7 @@ function Dashboard() {
           />
           <StatCard
             label="تأخير اليوم"
-            value={`${ar(todayAttendanceMetrics.late)} موظف`}
+            value={`${num(todayAttendanceMetrics.late)} موظف`}
             hint="سجلوا دخولاً بعد موعد بدء الدوام الرسمي"
             icon="alarm_on"
             tone="cyan"
@@ -600,7 +614,7 @@ function Dashboard() {
           />
           <StatCard
             label="انصراف مبكر اليوم"
-            value={`${ar(todayAttendanceMetrics.early)} موظف`}
+            value={`${num(todayAttendanceMetrics.early)} موظف`}
             hint="سجلوا خروجاً قبل نهاية ساعات العمل المقررة"
             icon="logout"
             tone="indigo"
@@ -624,7 +638,7 @@ function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="الموظفون المفعلون (نشط)"
-            value={`${ar(activeEmployees.length)} موظف`}
+            value={`${num(activeEmployees.length)} موظف`}
             hint="على رأس العمل ومسجلون في المسير الشهري"
             icon="verified_user"
             tone="teal"
@@ -632,7 +646,7 @@ function Dashboard() {
           />
           <StatCard
             label="الموقوفون من المصاير والصرف"
-            value={`${ar(suspendedEmployees.length)} موظف`}
+            value={`${num(suspendedEmployees.length)} موظف`}
             hint="معلق صرف رواتبهم بقرارات إدارية أو إيقاف"
             icon="block"
             tone="rose"
@@ -641,7 +655,7 @@ function Dashboard() {
           />
           <StatCard
             label="المنتهي خدماتهم"
-            value={`${ar(terminatedEmployees.length)} موظف`}
+            value={`${num(terminatedEmployees.length)} موظف`}
             hint="استقالات وإنهاء خدمة وتصفيات مؤرشفة"
             icon="person_remove"
             tone="cyan"
@@ -649,8 +663,8 @@ function Dashboard() {
           />
           <StatCard
             label="إجمالي القوى العاملة المسجلة"
-            value={`${ar(employees.length)} موظف`}
-            hint={`تكلفة الرواتب التقديرية: ${money(payroll)}`}
+            value={`${num(employees.length)} موظف`}
+            hint={`تكلفة الرواتب التقديرية: ${numMoney(payroll)}`}
             icon="groups"
             tone="sky"
             to="/reports/employee-headcount"
@@ -663,7 +677,7 @@ function Dashboard() {
         <Panel
           title="الطلبات المعلقة وبانتظار الاعتماد"
           icon="pending_actions"
-          badge={`${ar(totalPending)} طلب معلق`}
+          badge={`${num(totalPending)} طلب معلق`}
           className="xl:col-span-2"
           action={
             <Link
@@ -678,26 +692,26 @@ function Dashboard() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
             <div className="rounded-2xl border border-slate-200 bg-[#f8fafd] p-3 text-center">
               <span className="text-[11px] font-bold text-slate-500 block">إجازات معلقة</span>
-              <span className="text-lg font-black text-[#0b57d0] font-mono mt-0.5 block">
-                {ar(pendingLeavesList.length)}
+              <span className="text-lg font-black text-[#0b57d0] font-sans tabular-nums mt-0.5 block">
+                {num(pendingLeavesList.length)}
               </span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-[#f8fafd] p-3 text-center">
               <span className="text-[11px] font-bold text-slate-500 block">سلف معلقة</span>
-              <span className="text-lg font-black text-amber-600 font-mono mt-0.5 block">
-                {ar(pendingLoansList.length)}
+              <span className="text-lg font-black text-amber-600 font-sans tabular-nums mt-0.5 block">
+                {num(pendingLoansList.length)}
               </span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-[#f8fafd] p-3 text-center">
               <span className="text-[11px] font-bold text-slate-500 block">طلبات عامة</span>
-              <span className="text-lg font-black text-indigo-600 font-mono mt-0.5 block">
-                {ar(pendingRequestsList.length)}
+              <span className="text-lg font-black text-indigo-600 font-sans tabular-nums mt-0.5 block">
+                {num(pendingRequestsList.length)}
               </span>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-[#f8fafd] p-3 text-center">
               <span className="text-[11px] font-bold text-slate-500 block">إجمالي المعلق</span>
-              <span className="text-lg font-black text-rose-600 font-mono mt-0.5 block">
-                {ar(totalPending)}
+              <span className="text-lg font-black text-rose-600 font-sans tabular-nums mt-0.5 block">
+                {num(totalPending)}
               </span>
             </div>
           </div>
@@ -720,7 +734,7 @@ function Dashboard() {
                     </span>
                   </div>
                 </div>
-                <span className="rounded-full bg-amber-50 border border-amber-200 px-3 py-0.5 text-[10.5px] font-bold text-amber-700">
+                <span className="rounded-full bg-amber-50 border border-amber-200 px-3 py-0.5 text-[10.5px] font-bold text-amber-700 font-sans tabular-nums">
                   {String(r["status"] ?? "معلق")}
                 </span>
               </li>
@@ -742,7 +756,7 @@ function Dashboard() {
                 {upcomingContracts.slice(0, 3).map((e) => (
                   <li key={String(e["id"])} className="flex items-center justify-between text-xs font-bold bg-[#f8fafd] p-2.5 rounded-xl border border-slate-100">
                     <span className="text-slate-800 truncate max-w-[140px]">{String(e["full_name"])}</span>
-                    <span className="text-rose-600 font-mono text-[11px] font-extrabold">
+                    <span className="text-rose-600 font-sans tabular-nums text-[11px] font-extrabold">
                       {String(e["contract_end"] ?? e["contract_end_date"])}
                     </span>
                   </li>
@@ -762,7 +776,7 @@ function Dashboard() {
         </Panel>
       </div>
 
-      {/* ─── SECTION 4: ORGANIZATIONAL & DEMOGRAPHIC DISTRIBUTIONS (NEW EXTENSIVE MODULE) ─── */}
+      {/* ─── SECTION 4: ORGANIZATIONAL & DEMOGRAPHIC DISTRIBUTIONS ─── */}
       <div className="mb-6">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-3 px-1">
           <div>
@@ -861,8 +875,8 @@ function Dashboard() {
                       <span className="size-2 rounded-full" style={{ background: palette[i % palette.length] }} />
                       <span className="text-slate-800">{d.name}</span>
                     </span>
-                    <span className="font-mono text-slate-600 font-bold">
-                      {ar(d.count)} موظف ({d.percent}%)
+                    <span className="font-sans tabular-nums text-slate-600 font-bold">
+                      {num(d.count)} موظف ({d.percent}%)
                     </span>
                   </li>
                 ))}
@@ -871,7 +885,7 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Tab 2: JOB LEVELS (المستويات الوظيفية) */}
+        {/* Tab 2: JOB LEVELS */}
         {distributionTab === "job_levels" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Panel title="توزيع المستويات الوظيفية (إشرافي / تنفيذي / قيادي)" icon="stacked_bar_chart" className="lg:col-span-2">
@@ -913,7 +927,7 @@ function Dashboard() {
                       <span className="size-2 rounded-full" style={{ background: palette[(i + 4) % palette.length] }} />
                       {d.name}
                     </span>
-                    <span className="font-mono">{ar(d.count)} ({d.percent}%)</span>
+                    <span className="font-sans tabular-nums">{num(d.count)} ({d.percent}%)</span>
                   </li>
                 ))}
               </ul>
@@ -921,7 +935,7 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Tab 3: JOB CATEGORIES (الفئات الوظيفية) */}
+        {/* Tab 3: JOB CATEGORIES */}
         {distributionTab === "job_categories" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Panel title="توزيع الفئات الوظيفية (درجات الكوادر والوظائف)" icon="category" className="lg:col-span-2">
@@ -946,7 +960,7 @@ function Dashboard() {
                       <span className="size-2.5 rounded-full" style={{ background: palette[(i + 2) % palette.length] }} />
                       <span className="text-slate-800">{d.name}</span>
                     </span>
-                    <span className="font-mono text-[#00639b] font-extrabold">{ar(d.count)} ({d.percent}%)</span>
+                    <span className="font-sans tabular-nums text-[#00639b] font-extrabold">{num(d.count)} ({d.percent}%)</span>
                   </li>
                 ))}
               </ul>
@@ -954,7 +968,7 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Tab 4: JOB SECTORS (قطاعات الوظائف) */}
+        {/* Tab 4: JOB SECTORS */}
         {distributionTab === "sectors" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Panel title="توزيع قطاعات الوظائف الحالية داخل المنشأة" icon="work_outline" className="lg:col-span-2">
@@ -984,7 +998,7 @@ function Dashboard() {
                       <span className="size-2 rounded-full" style={{ background: palette[(i + 1) % palette.length] }} />
                       <span className="text-slate-800">{d.name}</span>
                     </span>
-                    <span className="font-mono text-emerald-700 font-extrabold">{ar(d.count)} ({d.percent}%)</span>
+                    <span className="font-sans tabular-nums text-emerald-700 font-extrabold">{num(d.count)} ({d.percent}%)</span>
                   </li>
                 ))}
               </ul>
@@ -992,27 +1006,27 @@ function Dashboard() {
           </div>
         )}
 
-        {/* Tab 5: NATIONALITIES & SAUDIZATION (الجنسيات والتوطين) */}
+        {/* Tab 5: NATIONALITIES & SAUDIZATION */}
         {distributionTab === "nationalities" && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <Panel title="توزيع الجنسيات ونسب التوطين (سعودي / غير سعودي)" icon="public" className="lg:col-span-2">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
                 <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 text-center">
                   <span className="text-xs font-bold text-emerald-800 block">نسبة التوطين الحالية (السعودة)</span>
-                  <span className="text-3xl font-black text-emerald-700 font-mono mt-1 block">
+                  <span className="text-3xl font-black text-emerald-700 font-sans tabular-nums mt-1 block">
                     {nationalityData.saudizationRate}%
                   </span>
-                  <span className="text-[11px] font-bold text-emerald-600 mt-0.5 block">
-                    {ar(nationalityData.saudiCount)} موظف سعودي من أصل {ar(employees.length)}
+                  <span className="text-[11px] font-bold text-emerald-600 mt-0.5 block font-sans tabular-nums">
+                    {num(nationalityData.saudiCount)} موظف سعودي من أصل {num(employees.length)}
                   </span>
                 </div>
                 <div className="rounded-2xl border border-blue-200 bg-blue-50/70 p-4 text-center">
                   <span className="text-xs font-bold text-[#004e82] block">إجمالي الكوادر غير السعودية</span>
-                  <span className="text-3xl font-black text-[#0b57d0] font-mono mt-1 block">
-                    {ar(nationalityData.nonSaudiCount)}
+                  <span className="text-3xl font-black text-[#0b57d0] font-sans tabular-nums mt-1 block">
+                    {num(nationalityData.nonSaudiCount)}
                   </span>
-                  <span className="text-[11px] font-bold text-[#004e82] mt-0.5 block">
-                    متنوعون عبر {nationalityData.list.length} جنسيات مختلفة
+                  <span className="text-[11px] font-bold text-[#004e82] mt-0.5 block font-sans tabular-nums">
+                    متنوعون عبر {num(nationalityData.list.length)} جنسيات مختلفة
                   </span>
                 </div>
               </div>
@@ -1038,7 +1052,7 @@ function Dashboard() {
                       <span className="size-2 rounded-full" style={{ background: palette[i % palette.length] }} />
                       <span className="text-slate-800">{n.name}</span>
                     </span>
-                    <span className="font-mono text-slate-700 font-extrabold">{ar(n.count)} ({n.percent}%)</span>
+                    <span className="font-sans tabular-nums text-slate-700 font-extrabold">{num(n.count)} ({n.percent}%)</span>
                   </li>
                 ))}
               </ul>
@@ -1094,7 +1108,7 @@ function Dashboard() {
         <Panel
           title="مسيرات الرواتب المنفذة"
           icon="account_balance_wallet"
-          badge={`${ar(runs.length)} مسير`}
+          badge={`${num(runs.length)} مسير`}
         >
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
