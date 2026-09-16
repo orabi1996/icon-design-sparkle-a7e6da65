@@ -1,3 +1,7 @@
+/**
+ * لوحة معلومات وإحصائيات الموارد البشرية - Google Material Design 3
+ * Enterprise HRMS Live Analytics Dashboard
+ */
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
