@@ -54,7 +54,7 @@ function BankFileGeneratorPage() {
       const loan = idx % 4 === 0 ? 500 : 0;
       const net = total - gosi - loan;
 
-      const bankInfo = BANKS[idx % BANKS.length];
+      const bankInfo = BANKS[idx % BANKS.length]!;
       const iban = emp["iban"] || `SA${(idx + 10).toString().padStart(2, "0")}${bankInfo.code}0000${(1000000000 + idx * 999)}`;
       const nationalId = emp["national_id"] || (isSaudi ? `10${(idx + 10000000)}` : `20${(idx + 10000000)}`);
 

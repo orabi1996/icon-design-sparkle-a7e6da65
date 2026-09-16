@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { AppShell } from "@/components/hr/AppShell";
 import { CrudTable } from "@/components/hr/CrudTable";
@@ -38,8 +38,14 @@ export const Route = createFileRoute("/payroll")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Payroll,
+  component: PayrollRoute,
 });
+
+function PayrollRoute() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  if (pathname.replace(/\/$/, "") !== "/payroll") return <Outlet />;
+  return <Payroll />;
+}
 
 const years = ["اختر ....", "٢٠٢٦", "٢٠٢٥", "٢٠٢٤"];
 const months = ["اختر ....", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩", "١٠", "١١", "١٢"];

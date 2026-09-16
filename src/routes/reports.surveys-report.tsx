@@ -35,7 +35,6 @@ const inputCls =
 
 function SurveysReport() {
   const { data: employees = [] } = useRows("employees");
-  const { data: rawSurveys = [], isLoading } = useRows("surveys", { orderBy: "id" });
 
   const [filters, setFilters] = useState({
     category: "",

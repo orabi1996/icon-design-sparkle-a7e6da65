@@ -71,7 +71,7 @@ function PettyCashReport() {
     ];
 
     return employees.map((emp, i) => {
-      const c = types[i % types.length];
+      const c = types[i % types.length]!;
       const spent = i % 2 === 0 ? c.amt : Math.round(c.amt * 0.6);
       const rem = c.amt - spent;
       const isSettled = rem === 0;

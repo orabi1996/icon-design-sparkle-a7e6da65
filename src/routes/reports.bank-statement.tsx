@@ -72,7 +72,7 @@ function BankStatementReport() {
     ];
 
     return employees.map((emp, i) => {
-      const bInfo = bankList[i % bankList.length];
+      const bInfo = bankList[i % bankList.length]!;
       const basic = Number(emp["basic_salary"] || (i % 2 === 0 ? 6000 : 8500));
       const housing = Math.round(basic * 0.25);
       const transport = Math.round(basic * 0.1);

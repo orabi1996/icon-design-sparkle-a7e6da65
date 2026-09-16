@@ -1,30 +1,21 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import * as XLSX from "xlsx";
 import { AppShell } from "@/components/hr/AppShell";
 import { MaterialIcon } from "@/components/MaterialIcon";
-import { useRows, type Row } from "@/lib/hr-db";
+import { useLoanReportRows } from "@/lib/report-rows";
+import { summarizeLoanBalances, totalLoanBalances, csvCell, type LoanBalanceRow } from "@/lib/business-core.mjs";
 
 export const Route = createFileRoute("/reports/loans-balance")({
   head: () => ({ meta: [{ title: "تقرير أرصدة السلف والقروض القائمة | التقارير المالية" }] }),
-  component: LoansBalanceReport,
+  component: LoansBalanceRoute,
 });
 
-type LoanBalanceItem = {
-  id: string;
-  emp_no: string;
-  employee_name: string;
-  branch: string;
-  department: string;
-  job_title: string;
-  loans_count: number;
-  total_granted: number;
-  total_paid: number;
-  current_balance: number;
-  active_monthly_installment: number;
-  last_payment_date: string;
-  status: string;
-};
+type LoanBalanceItem = LoanBalanceRow;
+
+function LoansBalanceRoute() {
+  return <AppShell><LoansBalanceReport /></AppShell>;
+}
 
 function uniq(arr: string[]) {
   return [...new Set(arr.filter(Boolean))].sort((a, b) => a.localeCompare(b, "ar"));
@@ -34,7 +25,11 @@ const inputCls =
   "h-8 w-full rounded border border-[#b4c7e7] bg-white px-2.5 text-[12px] font-medium text-slate-800 outline-none transition focus:border-[#0070c0] focus:ring-1 focus:ring-[#0070c0]/20";
 
 function LoansBalanceReport() {
-  const { data: employees = [], isLoading } = useRows("employees", { orderBy: "emp_no", ascending: true });
+  const employeeQuery = useLoanReportRows("employees");
+  const loanQuery = useLoanReportRows("loans");
+  const employees = employeeQuery.data ?? [];
+  const loans = loanQuery.data ?? [];
+  const isLoading = employeeQuery.isPending || loanQuery.isPending;
 
   const [filters, setFilters] = useState({
     branch: "",
@@ -56,33 +51,14 @@ function LoansBalanceReport() {
     departments: uniq(employees.map((e) => String(e["department"] ?? ""))),
   }), [employees]);
 
-  // Aggregate balance per employee
-  const balanceRows = useMemo(() => {
-    return employees.map((emp, i) => {
-      const hasLoan = i % 2 === 0;
-      const count = hasLoan ? (i % 4 === 0 ? 2 : 1) : 0;
-      const totalGranted = count * 10000;
-      const paid = count > 0 ? (i % 6 + 1) * 1000 : 0;
-      const balance = Math.max(0, totalGranted - paid);
-      const monthly = count > 0 && balance > 0 ? 1000 : 0;
-
-      return {
-        id: `bal-${emp["emp_no"] || i}`,
-        emp_no: emp["emp_no"] || String(i + 1),
-        employee_name: emp["full_name"] || "—",
-        branch: emp["branch"] || "شركة الحلول الخبيرة",
-        department: emp["department"] || "التطوير",
-        job_title: emp["job_title"] || "موظف",
-        loans_count: count,
-        total_granted: totalGranted,
-        total_paid: paid,
-        current_balance: balance,
-        active_monthly_installment: monthly,
-        last_payment_date: count > 0 ? "2025/05/25" : "—",
-        status: balance > 0 ? "يوجد رصيد قائم" : count > 0 ? "مسدد بالكامل" : "لا توجد سلف",
-      } as LoanBalanceItem;
-    });
-  }, [employees]);
+  // Read actual loan amounts; never synthesize balances or payment dates.
+  const summary = useMemo(() => {
+    try { return { ...summarizeLoanBalances(employees, loans), error: null as Error | null }; }
+    catch (error) { return { rows: [] as LoanBalanceItem[], issues: [], error: error as Error }; }
+  }, [employees, loans]);
+  const reportError = employeeQuery.error || loanQuery.error || summary.error;
+  const blocked = isLoading || Boolean(reportError);
+  const balanceRows = blocked ? [] : summary.rows;
 
   // Filtering
   const filtered = useMemo(() => {
@@ -137,24 +113,15 @@ function LoansBalanceReport() {
   // Pagination
   const totalItems = sorted.length;
   const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const visiblePage = Math.min(currentPage, totalPages);
+  useEffect(() => { setCurrentPage(1); }, [colFilters, appliedFilters, filters, globalSearch, pageSize]);
   const paginatedRows = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
+    const start = (visiblePage - 1) * pageSize;
     return sorted.slice(start, start + pageSize);
-  }, [sorted, currentPage, pageSize]);
+  }, [sorted, visiblePage, pageSize]);
 
-  // Totals
-  const totals = useMemo(() => {
-    return filtered.reduce(
-      (acc, r) => {
-        acc.granted += r.total_granted;
-        acc.paid += r.total_paid;
-        acc.balance += r.current_balance;
-        acc.activeMonthly += r.active_monthly_installment;
-        return acc;
-      },
-      { granted: 0, paid: 0, balance: 0, activeMonthly: 0 }
-    );
-  }, [filtered]);
+  // Totals also use exact minor-unit arithmetic.
+  const totals = useMemo(() => totalLoanBalances(filtered), [filtered]);
 
   const handleSort = (colKey: string) => {
     if (sortCol === colKey) setSortAsc(!sortAsc);
@@ -166,15 +133,16 @@ function LoansBalanceReport() {
 
   /* ─── Export ─── */
   const exportExcel = (ext: "xlsx" | "xls") => {
+    if (blocked) return;
     const headers = [
       "الرقم الوظيفي", "اسم الموظف", "الفرع", "القسم", "المسمى الوظيفي",
       "عدد السلف", "إجمالي الممنوح", "إجمالي المسدد", "الرصيد القائم",
-      "القسط الشهري الجاري", "تاريخ آخر سداد", "الحالة"
+      "مجموع الأقساط المسجلة", "تاريخ آخر سداد", "الحالة", "معرّفات السلف المصدرية"
     ];
     const data = sorted.map((r) => [
       r.emp_no, r.employee_name, r.branch, r.department, r.job_title,
       r.loans_count, r.total_granted, r.total_paid, r.current_balance,
-      r.active_monthly_installment, r.last_payment_date, r.status
+      r.active_monthly_installment, r.last_payment_date, r.status, r.source_loan_ids.join(" | ")
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
@@ -186,24 +154,21 @@ function LoansBalanceReport() {
   };
 
   const exportCsv = () => {
-    const headers = [
-      "الرقم الوظيفي", "اسم الموظف", "الفرع", "القسم", "المسمى الوظيفي",
-      "عدد السلف", "إجمالي الممنوح", "إجمالي المسدد", "الرصيد القائم",
-      "القسط الشهري الجاري", "تاريخ آخر سداد", "الحالة"
-    ].join(",");
-    const rowsText = sorted.map((r) =>
-      `"${r.emp_no}","${r.employee_name}","${r.branch}","${r.department}","${r.job_title}",${r.loans_count},${r.total_granted},${r.total_paid},${r.current_balance},${r.active_monthly_installment},"${r.last_payment_date}","${r.status}"`
-    ).join("\n");
-    const blob = new Blob(["\uFEFF" + headers + "\n" + rowsText], { type: "text/csv;charset=utf-8;" });
+    if (blocked) return;
+    const matrix = [
+      ["الرقم الوظيفي", "اسم الموظف", "الفرع", "القسم", "المسمى الوظيفي", "عدد السلف", "إجمالي الممنوح", "إجمالي المسدد", "الرصيد القائم", "مجموع الأقساط المسجلة", "تاريخ آخر سداد", "الحالة", "معرّفات السلف المصدرية"],
+      ...sorted.map((r) => [r.emp_no, r.employee_name, r.branch, r.department, r.job_title,
+        r.loans_count, r.total_granted, r.total_paid, r.current_balance,
+        r.active_monthly_installment, r.last_payment_date, r.status, r.source_loan_ids.join(" | ")]),
+    ];
+    const blob = new Blob(["\uFEFF" + matrix.map((row) => row.map(csvCell).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "تقرير-أرصدة-السلف-للموظفين.csv";
-    a.click();
+    const link = document.createElement("a"); link.href = url; link.download = "loan-balances.csv"; link.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
-    <AppShell>
+    <>
       {/* Title */}
       <div className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2">
         <h1 className="text-[16px] font-extrabold text-[#004e82] flex items-center gap-2">
@@ -213,23 +178,35 @@ function LoansBalanceReport() {
         <div className="text-[11px] text-slate-400">التقارير / تقارير ماليات الموظفين / رصيد السلف</div>
       </div>
 
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs leading-6">
+        المصدر: سجلات السلف الفعلية والموظفون في قاعدة البيانات القديمة. السلف المرفوضة أو الملغاة أو غير المعتمدة مستبعدة.
+        مجموع الأقساط المسجلة ليس استحقاق الشهر ولا يرحّل خصمًا إلى الرواتب. تاريخ آخر سداد غير متاح لعدم وجود دفتر حركات سداد في النموذج الحالي.
+        <a href="/loans" className="ms-2 font-bold text-blue-700 underline">فتح إدارة السلف</a>
+      </div>
+      {reportError && <div role="alert" className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm">
+        تعذر إعداد التقرير: {reportError.message}
+        <button onClick={() => { void employeeQuery.refetch(); void loanQuery.refetch(); }} className="ms-3 underline">إعادة المحاولة</button>
+      </div>}
+      {!blocked && summary.issues.length > 0 && <div role="alert" className="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-xs">
+        توجد {summary.issues.length} ملاحظة في ربط السلف أو أرصدتها. تظهر السجلات كما هي مع عبارة «يحتاج مراجعة»؛ راجع المصدر قبل استخدام التقرير ماليًا.
+      </div>}
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4" dir="rtl">
         <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 shadow-xs">
           <div className="text-[11px] font-bold text-slate-500">إجمالي المبالغ الممنوحة</div>
-          <div className="text-lg font-extrabold text-[#0070c0] font-mono mt-1">{totals.granted.toLocaleString()} ريال</div>
+          <div className="text-lg font-extrabold text-[#0070c0] font-mono mt-1">{blocked ? "—" : totals.granted.toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ريال</div>
         </div>
         <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 shadow-xs">
           <div className="text-[11px] font-bold text-slate-500">إجمالي المبالغ المحصلة</div>
-          <div className="text-lg font-extrabold text-emerald-700 font-mono mt-1">{totals.paid.toLocaleString()} ريال</div>
+          <div className="text-lg font-extrabold text-emerald-700 font-mono mt-1">{blocked ? "—" : totals.paid.toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ريال</div>
         </div>
         <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 shadow-xs">
           <div className="text-[11px] font-bold text-slate-500">إجمالي محفظة السلف القائمة</div>
-          <div className="text-lg font-extrabold text-amber-700 font-mono mt-1">{totals.balance.toLocaleString()} ريال</div>
+          <div className="text-lg font-extrabold text-amber-700 font-mono mt-1">{blocked ? "—" : totals.balance.toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ريال</div>
         </div>
         <div className="rounded-xl border border-purple-200 bg-purple-50/60 p-3 shadow-xs">
-          <div className="text-[11px] font-bold text-slate-500">إجمالي الأقساط الشهرية النشطة</div>
-          <div className="text-lg font-extrabold text-purple-700 font-mono mt-1">{totals.activeMonthly.toLocaleString()} ريال</div>
+          <div className="text-[11px] font-bold text-slate-500">مجموع الأقساط المسجلة للسلف القائمة</div>
+          <div className="text-lg font-extrabold text-purple-700 font-mono mt-1">{blocked ? "—" : totals.activeMonthly.toLocaleString("ar-EG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ريال</div>
         </div>
       </div>
 
@@ -322,13 +299,15 @@ function LoansBalanceReport() {
 
           <div className="flex items-center gap-1.5 mr-2">
             <button
-              onClick={() => window.print()}
+              disabled={blocked}
+              onClick={() => { if (!blocked) window.print(); }}
               title="طباعة / PDF"
               className="flex items-center justify-center h-8 w-8 rounded border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition shadow-xs"
             >
               <span className="text-[10px] font-extrabold uppercase">PDF</span>
             </button>
             <button
+              disabled={blocked}
               onClick={() => exportExcel("xls")}
               title="تصدير XLS"
               className="flex items-center justify-center h-8 w-8 rounded border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition shadow-xs"
@@ -336,6 +315,7 @@ function LoansBalanceReport() {
               <span className="text-[10px] font-extrabold uppercase">XLS</span>
             </button>
             <button
+              disabled={blocked}
               onClick={() => exportExcel("xlsx")}
               title="تصدير XLSX"
               className="flex items-center justify-center h-8 px-2 rounded border border-emerald-300 bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-xs gap-1 font-bold text-[11px]"
@@ -344,6 +324,7 @@ function LoansBalanceReport() {
               <span>XLSX</span>
             </button>
             <button
+              disabled={blocked}
               onClick={exportCsv}
               title="تصدير CSV"
               className="flex items-center justify-center h-8 px-2 rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition shadow-xs font-bold text-[11px]"
@@ -367,7 +348,7 @@ function LoansBalanceReport() {
               <th onClick={() => handleSort("total_granted")} className="px-2.5 py-2 font-extrabold border-r border-[#00385e] text-center cursor-pointer select-none">إجمالي الممنوح</th>
               <th onClick={() => handleSort("total_paid")} className="px-2.5 py-2 font-extrabold border-r border-[#00385e] text-center cursor-pointer select-none">إجمالي المسدد</th>
               <th onClick={() => handleSort("current_balance")} className="px-3 py-2 font-extrabold border-r border-[#00385e] text-center cursor-pointer select-none bg-[#7a481c]">الرصيد القائم المتبقي</th>
-              <th onClick={() => handleSort("active_monthly_installment")} className="px-2.5 py-2 font-extrabold border-r border-[#00385e] text-center cursor-pointer select-none">القسط الشهري الجاري</th>
+              <th onClick={() => handleSort("active_monthly_installment")} className="px-2.5 py-2 font-extrabold border-r border-[#00385e] text-center cursor-pointer select-none">مجموع الأقساط المسجلة</th>
               <th onClick={() => handleSort("last_payment_date")} className="px-2.5 py-2 font-extrabold border-r border-[#00385e] text-center cursor-pointer select-none">تاريخ آخر سداد</th>
               <th className="px-2.5 py-2 font-extrabold text-center">الحالة</th>
             </tr>
@@ -392,7 +373,7 @@ function LoansBalanceReport() {
           </thead>
 
           <tbody>
-            {isLoading ? (
+            {reportError ? (<tr><td colSpan={11} className="py-10 text-center text-red-700">تعذر تحميل بيانات كاملة؛ لم يتم عرض إجماليات ناقصة.</td></tr>) : isLoading ? (
               <tr>
                 <td colSpan={11} className="text-center py-10 text-slate-500 font-bold">
                   جارٍ تحميل بيانات الأرصدة...
@@ -442,8 +423,8 @@ function LoansBalanceReport() {
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600" dir="rtl">
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, Math.min(p, totalPages) - 1))}
+            disabled={visiblePage === 1}
             className="rounded border border-slate-300 bg-white px-2 py-1 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             ‹
@@ -455,7 +436,7 @@ function LoansBalanceReport() {
                 key={p}
                 onClick={() => setCurrentPage(p)}
                 className={`rounded px-2.5 py-1 text-xs font-bold transition ${
-                  currentPage === p
+                  visiblePage === p
                     ? "bg-[#0070c0] text-white"
                     : "border border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
                 }`}
@@ -470,7 +451,7 @@ function LoansBalanceReport() {
               <button
                 onClick={() => setCurrentPage(totalPages)}
                 className={`rounded px-2.5 py-1 text-xs font-bold transition ${
-                  currentPage === totalPages
+                  visiblePage === totalPages
                     ? "bg-[#0070c0] text-white"
                     : "border border-slate-300 bg-white hover:bg-slate-50 text-slate-700"
                 }`}
@@ -480,14 +461,14 @@ function LoansBalanceReport() {
             </>
           )}
           <button
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, Math.min(p, totalPages) + 1))}
+            disabled={visiblePage === totalPages}
             className="rounded border border-slate-300 bg-white px-2 py-1 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
           >
             ›
           </button>
           <span className="mr-3 font-bold text-slate-500">
-            صفحة {currentPage} من {totalPages} [{totalItems} عنصر]
+            صفحة {visiblePage} من {totalPages} [{totalItems} عنصر]
           </span>
         </div>
 
@@ -515,6 +496,6 @@ function LoansBalanceReport() {
       <div className="mt-8 text-center text-xs font-bold text-slate-400 border-t border-slate-200 pt-4">
         جميع الحقوق محفوظة © الحلول الخبيرة
       </div>
-    </AppShell>
+    </>
   );
 }

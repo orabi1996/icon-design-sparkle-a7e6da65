@@ -72,7 +72,7 @@ const palette = [
   "#f57c00", // Orange
 ];
 
-const tones: Record<string, { bg: string; text: string; bar: string }> = {
+const tones = {
   sky: { bg: "bg-[#e8f0fe]", text: "text-[#0b57d0]", bar: "bg-[#0b57d0]" },
   teal: { bg: "bg-[#e6f4ea]", text: "text-[#137333]", bar: "bg-[#137333]" },
   cyan: { bg: "bg-[#fef7e0]", text: "text-[#b06000]", bar: "bg-[#b06000]" },
@@ -97,7 +97,7 @@ function StatCard({
   badge?: string;
   to?: string;
 }) {
-  const currentTone = tones[tone] ?? tones.sky;
+  const currentTone = tones[tone] ?? tones["sky"];
   const body = (
     <article className="group relative h-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] transition-all duration-200 hover:shadow-[0_4px_20px_0_rgba(60,64,67,0.12)] hover:-translate-y-0.5">
       <span className={`absolute inset-x-0 top-0 h-1.5 ${currentTone.bar}`} />

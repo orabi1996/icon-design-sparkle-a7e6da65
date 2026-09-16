@@ -1,0 +1,20 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export const PRIORITIES: Record<string, number>;
+export const IMPORT_COLUMNS: string[];
+export function effective(x: any, day: string): boolean;
+export function effectiveRevisions(items: any[], day: string): any[];
+export function latest(items: any[], id: string): any;
+export function atVersion(items: any[], id: string, version: number): any;
+export function activeVersion(items: any[], code: string, day: string): any;
+export function employmentAt(state: any, employeeId: string, day: string): any;
+export function validateDefinition(kind: string, input: any): any;
+export function assignmentFromShift(...args: any[]): any;
+export function explicitDay(...args: any[]): any;
+export function generate(...args: any[]): any[];
+export function publishedAssignments(state: any): any[];
+export function requiredIntervals(a: any): number[][];
+export function approvedLeaveIntervals(...args: any[]): number[][];
+export function validateRoster(state: any, roster: any): any[];
+export function coverage(state: any, assignments: any[], demands?: any[]): { segments: any[]; requiredMinutes: number; coveredMinutes: number; ratio: number | null };
+export function previewImport(...args: any[]): { assignments: any[]; errors: any[]; issues: any[]; inputCount: number };
+export function differences(before?: any[], after?: any[]): any[];

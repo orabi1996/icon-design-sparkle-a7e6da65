@@ -99,7 +99,7 @@ function CompanyDocumentsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const [newDoc, setNewDoc] = useState({
-    doc_type: DOC_TYPES[0],
+    doc_type: DOC_TYPES[0]!,
     doc_no: "",
     branch: "المقر الرئيسي - الرياض",
     issuer: "",
@@ -129,7 +129,7 @@ function CompanyDocumentsPage() {
   const handleOpenAdd = () => {
     setEditingDoc(null);
     setNewDoc({
-      doc_type: DOC_TYPES[0],
+      doc_type: DOC_TYPES[0]!,
       doc_no: "",
       branch: "المقر الرئيسي - الرياض",
       issuer: "",

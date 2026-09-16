@@ -5,6 +5,7 @@ import { AppShell } from "@/components/hr/AppShell";
 import { Breadcrumbs, Btn, Chip } from "@/components/hr/ui";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useRows, type Row } from "@/lib/hr-db";
+import { useCurrentIsAdmin } from "@/lib/permissions-db";
 
 export const Route = createFileRoute("/reports/fingerprint")({
   head: () => ({
@@ -87,7 +88,10 @@ function firstOfYear() {
 
 /* --------------------------------- CSV --------------------------------- */
 function escapeCsv(v: unknown) {
-  const raw = String(v ?? "").replaceAll('"', '""');
+  let raw = String(v ?? "");
+  // Quoting alone does not stop spreadsheet formula execution in downloaded CSVs.
+  if (/^(?:\s*[=+@-]|[\t\r\n])/.test(raw)) raw = `'${raw}`;
+  raw = raw.replaceAll('"', '""');
   return `"${raw}"`;
 }
 function exportCsv(rows: Row[]) {
@@ -149,6 +153,7 @@ const COLUMNS: { key: ColKey; label: string }[] = [
 ];
 
 function FingerprintReportPage() {
+  const admin = useCurrentIsAdmin();
   const [from, setFrom] = useState(firstOfYear());
   const [to, setTo] = useState(todayISO());
   const [applied, setApplied] = useState({ from, to });
@@ -171,6 +176,7 @@ function FingerprintReportPage() {
   const {
     data: rows = [],
     isLoading,
+    error: recordsError,
   } = useRows("fingerprint_records", {
     orderBy: "punch_date",
     from: applied.from,
@@ -211,6 +217,16 @@ function FingerprintReportPage() {
   };
 
   const dateInvalid = from > to;
+
+  if (admin.isLoading || admin.isError || !admin.data || recordsError) {
+    const message = admin.isLoading ? "جارٍ التحقق من صلاحية التقرير..." : admin.isError || recordsError
+      ? "تعذّر فتح سجلات البصمة. أعد المحاولة أو تواصل مع مسؤول النظام."
+      : "سجلات البصمة الخام متاحة لمسؤول الصلاحيات فقط. اطلب منه مراجعة التقرير إذا لزم الأمر.";
+    return <AppShell><div className="mt-3"><Breadcrumbs trail={["التقارير", "تقارير البصمة", "تقرير بصمة الموظف"]} /></div>
+      <h1 className="mt-3 text-lg font-extrabold">تقرير بصمة الموظف</h1>
+      <p role={admin.isLoading ? "status" : "alert"} className="mt-4 rounded-xl border border-border bg-card p-5 text-sm font-semibold">{message}</p>
+    </AppShell>;
+  }
 
   return (
     <AppShell>

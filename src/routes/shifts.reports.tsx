@@ -1,0 +1,6 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { M08Workspace } from "@/components/hr/m08/Workspace";
+export const Route = createFileRoute("/shifts/reports")({
+  head: () => ({ meta: [{ title: "تقارير الشفتات | HRMS" }] }),
+  component: () => <M08Workspace screen="reports" />,
+});

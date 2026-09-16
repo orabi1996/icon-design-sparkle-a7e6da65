@@ -68,7 +68,7 @@ function PayrollAdjustmentsReport() {
     ];
 
     return employees.map((emp, i) => {
-      const adj = types[i % types.length];
+      const adj = types[i % types.length]!;
       return {
         id: `adj-${emp["emp_no"] || i}`,
         emp_no: emp["emp_no"] || String(i + 1),

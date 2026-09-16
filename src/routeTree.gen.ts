@@ -97,6 +97,21 @@ import { Route as SettingsCompanyDocumentsRouteImport } from './routes/settings.
 import { Route as SettingsGeneralRouteImport } from './routes/settings.general'
 import { Route as SettingsSponsorsRouteImport } from './routes/settings.sponsors'
 import { Route as SettingsSuspensionReasonsRouteImport } from './routes/settings.suspension-reasons'
+import { Route as ShiftsApprovalsRouteImport } from './routes/shifts.approvals'
+import { Route as ShiftsAuditRouteImport } from './routes/shifts.audit'
+import { Route as ShiftsBindingsRouteImport } from './routes/shifts.bindings'
+import { Route as ShiftsCoverageRouteImport } from './routes/shifts.coverage'
+import { Route as ShiftsExceptionsRouteImport } from './routes/shifts.exceptions'
+import { Route as ShiftsImportRouteImport } from './routes/shifts.import'
+import { Route as ShiftsLibraryRouteImport } from './routes/shifts.library'
+import { Route as ShiftsMineRouteImport } from './routes/shifts.mine'
+import { Route as ShiftsOpenRouteImport } from './routes/shifts.open'
+import { Route as ShiftsPatternsRouteImport } from './routes/shifts.patterns'
+import { Route as ShiftsPoliciesRouteImport } from './routes/shifts.policies'
+import { Route as ShiftsReportsRouteImport } from './routes/shifts.reports'
+import { Route as ShiftsRequestsRouteImport } from './routes/shifts.requests'
+import { Route as ShiftsRostersRouteImport } from './routes/shifts.rosters'
+import { Route as ShiftsTemplatesRouteImport } from './routes/shifts.templates'
 import { Route as StaffIndexRouteImport } from './routes/staff.index'
 import { Route as StaffAddRouteImport } from './routes/staff.add'
 import { Route as StaffBankBlockRouteImport } from './routes/staff.bank-block'
@@ -565,6 +580,81 @@ const SettingsSuspensionReasonsRoute =
     path: '/suspension-reasons',
     getParentRoute: () => SettingsRoute,
   } as any)
+const ShiftsApprovalsRoute = ShiftsApprovalsRouteImport.update({
+  id: '/shifts/approvals',
+  path: '/shifts/approvals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsAuditRoute = ShiftsAuditRouteImport.update({
+  id: '/shifts/audit',
+  path: '/shifts/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsBindingsRoute = ShiftsBindingsRouteImport.update({
+  id: '/shifts/bindings',
+  path: '/shifts/bindings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsCoverageRoute = ShiftsCoverageRouteImport.update({
+  id: '/shifts/coverage',
+  path: '/shifts/coverage',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsExceptionsRoute = ShiftsExceptionsRouteImport.update({
+  id: '/shifts/exceptions',
+  path: '/shifts/exceptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsImportRoute = ShiftsImportRouteImport.update({
+  id: '/shifts/import',
+  path: '/shifts/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsLibraryRoute = ShiftsLibraryRouteImport.update({
+  id: '/shifts/library',
+  path: '/shifts/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsMineRoute = ShiftsMineRouteImport.update({
+  id: '/shifts/mine',
+  path: '/shifts/mine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsOpenRoute = ShiftsOpenRouteImport.update({
+  id: '/shifts/open',
+  path: '/shifts/open',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsPatternsRoute = ShiftsPatternsRouteImport.update({
+  id: '/shifts/patterns',
+  path: '/shifts/patterns',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsPoliciesRoute = ShiftsPoliciesRouteImport.update({
+  id: '/shifts/policies',
+  path: '/shifts/policies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsReportsRoute = ShiftsReportsRouteImport.update({
+  id: '/shifts/reports',
+  path: '/shifts/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsRequestsRoute = ShiftsRequestsRouteImport.update({
+  id: '/shifts/requests',
+  path: '/shifts/requests',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsRostersRoute = ShiftsRostersRouteImport.update({
+  id: '/shifts/rosters',
+  path: '/shifts/rosters',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShiftsTemplatesRoute = ShiftsTemplatesRouteImport.update({
+  id: '/shifts/templates',
+  path: '/shifts/templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StaffIndexRoute = StaffIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -709,6 +799,21 @@ export interface FileRoutesByFullPath {
   '/settings/general': typeof SettingsGeneralRoute
   '/settings/sponsors': typeof SettingsSponsorsRoute
   '/settings/suspension-reasons': typeof SettingsSuspensionReasonsRoute
+  '/shifts/approvals': typeof ShiftsApprovalsRoute
+  '/shifts/audit': typeof ShiftsAuditRoute
+  '/shifts/bindings': typeof ShiftsBindingsRoute
+  '/shifts/coverage': typeof ShiftsCoverageRoute
+  '/shifts/exceptions': typeof ShiftsExceptionsRoute
+  '/shifts/import': typeof ShiftsImportRoute
+  '/shifts/library': typeof ShiftsLibraryRoute
+  '/shifts/mine': typeof ShiftsMineRoute
+  '/shifts/open': typeof ShiftsOpenRoute
+  '/shifts/patterns': typeof ShiftsPatternsRoute
+  '/shifts/policies': typeof ShiftsPoliciesRoute
+  '/shifts/reports': typeof ShiftsReportsRoute
+  '/shifts/requests': typeof ShiftsRequestsRoute
+  '/shifts/rosters': typeof ShiftsRostersRoute
+  '/shifts/templates': typeof ShiftsTemplatesRoute
   '/staff/add': typeof StaffAddRoute
   '/staff/bank-block': typeof StaffBankBlockRoute
   '/staff/contracts': typeof StaffContractsRoute
@@ -808,6 +913,21 @@ export interface FileRoutesByTo {
   '/settings/general': typeof SettingsGeneralRoute
   '/settings/sponsors': typeof SettingsSponsorsRoute
   '/settings/suspension-reasons': typeof SettingsSuspensionReasonsRoute
+  '/shifts/approvals': typeof ShiftsApprovalsRoute
+  '/shifts/audit': typeof ShiftsAuditRoute
+  '/shifts/bindings': typeof ShiftsBindingsRoute
+  '/shifts/coverage': typeof ShiftsCoverageRoute
+  '/shifts/exceptions': typeof ShiftsExceptionsRoute
+  '/shifts/import': typeof ShiftsImportRoute
+  '/shifts/library': typeof ShiftsLibraryRoute
+  '/shifts/mine': typeof ShiftsMineRoute
+  '/shifts/open': typeof ShiftsOpenRoute
+  '/shifts/patterns': typeof ShiftsPatternsRoute
+  '/shifts/policies': typeof ShiftsPoliciesRoute
+  '/shifts/reports': typeof ShiftsReportsRoute
+  '/shifts/requests': typeof ShiftsRequestsRoute
+  '/shifts/rosters': typeof ShiftsRostersRoute
+  '/shifts/templates': typeof ShiftsTemplatesRoute
   '/staff/add': typeof StaffAddRoute
   '/staff/bank-block': typeof StaffBankBlockRoute
   '/staff/contracts': typeof StaffContractsRoute
@@ -910,6 +1030,21 @@ export interface FileRoutesById {
   '/settings/general': typeof SettingsGeneralRoute
   '/settings/sponsors': typeof SettingsSponsorsRoute
   '/settings/suspension-reasons': typeof SettingsSuspensionReasonsRoute
+  '/shifts/approvals': typeof ShiftsApprovalsRoute
+  '/shifts/audit': typeof ShiftsAuditRoute
+  '/shifts/bindings': typeof ShiftsBindingsRoute
+  '/shifts/coverage': typeof ShiftsCoverageRoute
+  '/shifts/exceptions': typeof ShiftsExceptionsRoute
+  '/shifts/import': typeof ShiftsImportRoute
+  '/shifts/library': typeof ShiftsLibraryRoute
+  '/shifts/mine': typeof ShiftsMineRoute
+  '/shifts/open': typeof ShiftsOpenRoute
+  '/shifts/patterns': typeof ShiftsPatternsRoute
+  '/shifts/policies': typeof ShiftsPoliciesRoute
+  '/shifts/reports': typeof ShiftsReportsRoute
+  '/shifts/requests': typeof ShiftsRequestsRoute
+  '/shifts/rosters': typeof ShiftsRostersRoute
+  '/shifts/templates': typeof ShiftsTemplatesRoute
   '/staff/add': typeof StaffAddRoute
   '/staff/bank-block': typeof StaffBankBlockRoute
   '/staff/contracts': typeof StaffContractsRoute
@@ -1013,6 +1148,21 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/sponsors'
     | '/settings/suspension-reasons'
+    | '/shifts/approvals'
+    | '/shifts/audit'
+    | '/shifts/bindings'
+    | '/shifts/coverage'
+    | '/shifts/exceptions'
+    | '/shifts/import'
+    | '/shifts/library'
+    | '/shifts/mine'
+    | '/shifts/open'
+    | '/shifts/patterns'
+    | '/shifts/policies'
+    | '/shifts/reports'
+    | '/shifts/requests'
+    | '/shifts/rosters'
+    | '/shifts/templates'
     | '/staff/add'
     | '/staff/bank-block'
     | '/staff/contracts'
@@ -1112,6 +1262,21 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/sponsors'
     | '/settings/suspension-reasons'
+    | '/shifts/approvals'
+    | '/shifts/audit'
+    | '/shifts/bindings'
+    | '/shifts/coverage'
+    | '/shifts/exceptions'
+    | '/shifts/import'
+    | '/shifts/library'
+    | '/shifts/mine'
+    | '/shifts/open'
+    | '/shifts/patterns'
+    | '/shifts/policies'
+    | '/shifts/reports'
+    | '/shifts/requests'
+    | '/shifts/rosters'
+    | '/shifts/templates'
     | '/staff/add'
     | '/staff/bank-block'
     | '/staff/contracts'
@@ -1213,6 +1378,21 @@ export interface FileRouteTypes {
     | '/settings/general'
     | '/settings/sponsors'
     | '/settings/suspension-reasons'
+    | '/shifts/approvals'
+    | '/shifts/audit'
+    | '/shifts/bindings'
+    | '/shifts/coverage'
+    | '/shifts/exceptions'
+    | '/shifts/import'
+    | '/shifts/library'
+    | '/shifts/mine'
+    | '/shifts/open'
+    | '/shifts/patterns'
+    | '/shifts/policies'
+    | '/shifts/reports'
+    | '/shifts/requests'
+    | '/shifts/rosters'
+    | '/shifts/templates'
     | '/staff/add'
     | '/staff/bank-block'
     | '/staff/contracts'
@@ -1294,6 +1474,21 @@ export interface RootRouteChildren {
   ReportsSurveysReportRoute: typeof ReportsSurveysReportRoute
   RequestsPurchaseBudgetRoute: typeof RequestsPurchaseBudgetRoute
   RequestsSetupRoute: typeof RequestsSetupRoute
+  ShiftsApprovalsRoute: typeof ShiftsApprovalsRoute
+  ShiftsAuditRoute: typeof ShiftsAuditRoute
+  ShiftsBindingsRoute: typeof ShiftsBindingsRoute
+  ShiftsCoverageRoute: typeof ShiftsCoverageRoute
+  ShiftsExceptionsRoute: typeof ShiftsExceptionsRoute
+  ShiftsImportRoute: typeof ShiftsImportRoute
+  ShiftsLibraryRoute: typeof ShiftsLibraryRoute
+  ShiftsMineRoute: typeof ShiftsMineRoute
+  ShiftsOpenRoute: typeof ShiftsOpenRoute
+  ShiftsPatternsRoute: typeof ShiftsPatternsRoute
+  ShiftsPoliciesRoute: typeof ShiftsPoliciesRoute
+  ShiftsReportsRoute: typeof ShiftsReportsRoute
+  ShiftsRequestsRoute: typeof ShiftsRequestsRoute
+  ShiftsRostersRoute: typeof ShiftsRostersRoute
+  ShiftsTemplatesRoute: typeof ShiftsTemplatesRoute
   TasksPermissionsRoute: typeof TasksPermissionsRoute
   TasksReportsRoute: typeof TasksReportsRoute
   TasksSetupRoute: typeof TasksSetupRoute
@@ -1918,6 +2113,111 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsSuspensionReasonsRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/shifts/approvals': {
+      id: '/shifts/approvals'
+      path: '/shifts/approvals'
+      fullPath: '/shifts/approvals'
+      preLoaderRoute: typeof ShiftsApprovalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/audit': {
+      id: '/shifts/audit'
+      path: '/shifts/audit'
+      fullPath: '/shifts/audit'
+      preLoaderRoute: typeof ShiftsAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/bindings': {
+      id: '/shifts/bindings'
+      path: '/shifts/bindings'
+      fullPath: '/shifts/bindings'
+      preLoaderRoute: typeof ShiftsBindingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/coverage': {
+      id: '/shifts/coverage'
+      path: '/shifts/coverage'
+      fullPath: '/shifts/coverage'
+      preLoaderRoute: typeof ShiftsCoverageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/exceptions': {
+      id: '/shifts/exceptions'
+      path: '/shifts/exceptions'
+      fullPath: '/shifts/exceptions'
+      preLoaderRoute: typeof ShiftsExceptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/import': {
+      id: '/shifts/import'
+      path: '/shifts/import'
+      fullPath: '/shifts/import'
+      preLoaderRoute: typeof ShiftsImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/library': {
+      id: '/shifts/library'
+      path: '/shifts/library'
+      fullPath: '/shifts/library'
+      preLoaderRoute: typeof ShiftsLibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/mine': {
+      id: '/shifts/mine'
+      path: '/shifts/mine'
+      fullPath: '/shifts/mine'
+      preLoaderRoute: typeof ShiftsMineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/open': {
+      id: '/shifts/open'
+      path: '/shifts/open'
+      fullPath: '/shifts/open'
+      preLoaderRoute: typeof ShiftsOpenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/patterns': {
+      id: '/shifts/patterns'
+      path: '/shifts/patterns'
+      fullPath: '/shifts/patterns'
+      preLoaderRoute: typeof ShiftsPatternsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/policies': {
+      id: '/shifts/policies'
+      path: '/shifts/policies'
+      fullPath: '/shifts/policies'
+      preLoaderRoute: typeof ShiftsPoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/reports': {
+      id: '/shifts/reports'
+      path: '/shifts/reports'
+      fullPath: '/shifts/reports'
+      preLoaderRoute: typeof ShiftsReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/requests': {
+      id: '/shifts/requests'
+      path: '/shifts/requests'
+      fullPath: '/shifts/requests'
+      preLoaderRoute: typeof ShiftsRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/rosters': {
+      id: '/shifts/rosters'
+      path: '/shifts/rosters'
+      fullPath: '/shifts/rosters'
+      preLoaderRoute: typeof ShiftsRostersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shifts/templates': {
+      id: '/shifts/templates'
+      path: '/shifts/templates'
+      fullPath: '/shifts/templates'
+      preLoaderRoute: typeof ShiftsTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/staff/': {
       id: '/staff/'
       path: '/'
@@ -2160,6 +2460,21 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsSurveysReportRoute: ReportsSurveysReportRoute,
   RequestsPurchaseBudgetRoute: RequestsPurchaseBudgetRoute,
   RequestsSetupRoute: RequestsSetupRoute,
+  ShiftsApprovalsRoute: ShiftsApprovalsRoute,
+  ShiftsAuditRoute: ShiftsAuditRoute,
+  ShiftsBindingsRoute: ShiftsBindingsRoute,
+  ShiftsCoverageRoute: ShiftsCoverageRoute,
+  ShiftsExceptionsRoute: ShiftsExceptionsRoute,
+  ShiftsImportRoute: ShiftsImportRoute,
+  ShiftsLibraryRoute: ShiftsLibraryRoute,
+  ShiftsMineRoute: ShiftsMineRoute,
+  ShiftsOpenRoute: ShiftsOpenRoute,
+  ShiftsPatternsRoute: ShiftsPatternsRoute,
+  ShiftsPoliciesRoute: ShiftsPoliciesRoute,
+  ShiftsReportsRoute: ShiftsReportsRoute,
+  ShiftsRequestsRoute: ShiftsRequestsRoute,
+  ShiftsRostersRoute: ShiftsRostersRoute,
+  ShiftsTemplatesRoute: ShiftsTemplatesRoute,
   TasksPermissionsRoute: TasksPermissionsRoute,
   TasksReportsRoute: TasksReportsRoute,
   TasksSetupRoute: TasksSetupRoute,
