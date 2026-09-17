@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { supabase } from "@/integrations/supabase/client";
+import { isSelfRegistrationAllowed } from "@/lib/auth-config";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -74,9 +75,17 @@ function AuthPage() {
       setFormError("أدخل بريدًا إلكترونيًا صحيحًا.");
       return;
     }
-    if (mode === "signup" && !normalizedFullName) {
-      setFormError("الاسم الكامل مطلوب لإنشاء الحساب.");
-      return;
+    if (mode === "signup") {
+      if (!isSelfRegistrationAllowed()) {
+        const closedMsg = "التسجيل الذاتي مغلق في هذا النظام. يتم إنشاء الحسابات وإدارتها بواسطة مسؤول النظام.";
+        setFormError(closedMsg);
+        toast.error(closedMsg);
+        return;
+      }
+      if (!normalizedFullName) {
+        setFormError("الاسم الكامل مطلوب لإنشاء الحساب.");
+        return;
+      }
     }
     if (!password) {
       setFormError("كلمة المرور مطلوبة.");
@@ -178,6 +187,12 @@ function AuthPage() {
             عالية.
           </p>
         </div>
+
+        {mode === "signup" && !isSelfRegistrationAllowed() && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-center text-xs font-bold text-amber-800">
+            التسجيل الذاتي مغلق في هذا النظام. يرجى التواصل مع إدارة الموارد البشرية لإنشاء حسابك وتفعيله.
+          </div>
+        )}
 
         <form onSubmit={submit} className="mt-6 space-y-4" aria-busy={busy}>
           <div>

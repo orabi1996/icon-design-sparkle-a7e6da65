@@ -5,10 +5,12 @@ const IV_LENGTH = 12;
 const SALT = "hrms-email-secret-salt-2026";
 
 function getMasterKey() {
-  const secret =
-    process.env["SUPABASE_SERVICE_ROLE_KEY"] ||
-    process.env["SECRET_KEY"] ||
-    "hrms-fallback-secret-key-32-chars-ok!!";
+  const secret = process.env["EMAIL_CONFIG_ENCRYPTION_KEY"];
+  if (!secret || typeof secret !== "string" || secret.trim().length === 0) {
+    throw new Error(
+      "Missing required environment secret: EMAIL_CONFIG_ENCRYPTION_KEY. Encryption failed securely.",
+    );
+  }
   return scryptSync(secret, SALT, 32);
 }
 
@@ -60,16 +62,17 @@ export function decryptSecret(ciphertext) {
 }
 
 /**
- * Check if a value is encrypted.
+ * Mask a secret string for display in UI (e.g. `••••••••`).
  */
-export function isEncrypted(value) {
-  return typeof value === "string" && value.startsWith("enc:v1:");
+export function maskSecret(secret) {
+  if (!secret || typeof secret !== "string") return "";
+  return "••••••••";
 }
 
 /**
- * Return a masked representation of a password or secret for client displays.
+ * Check whether a string is already encrypted.
  */
-export function maskSecret(secret) {
-  if (!secret || typeof secret !== "string" || secret.trim().length === 0) return "";
-  return "••••••••";
+export function isEncrypted(value) {
+  if (!value || typeof value !== "string") return false;
+  return value.startsWith("enc:v1:");
 }

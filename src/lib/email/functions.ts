@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission, logSecurityAudit } from "@/lib/server/authorization";
 import type {
   EmailLogItem,
   EmailRulesConfig,
@@ -29,10 +30,12 @@ async function getAdminDb() {
 
 /**
  * Get current SMTP config with password safely masked.
+ * Requires: email.settings (read)
  */
 export const getSmtpConfigFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<EmailSmtpConfig> => {
+  .handler(async ({ context }): Promise<EmailSmtpConfig> => {
+    await requirePermission(context, "email.settings", "read");
     const db = await getAdminDb();
     const config = await loadSmtpConfig(db);
     return {
@@ -43,6 +46,7 @@ export const getSmtpConfigFn = createServerFn({ method: "GET" })
 
 /**
  * Save SMTP config (validates and encrypts sensitive fields).
+ * Requires: email.settings (update)
  */
 export const saveSmtpConfigFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -63,14 +67,32 @@ export const saveSmtpConfigFn = createServerFn({ method: "POST" })
       })
       .parse(input);
   })
-  .handler(async ({ data }): Promise<{ success: boolean; message: string }> => {
+  .handler(async ({ data, context }): Promise<{ success: boolean; message: string }> => {
+    const user = await requirePermission(context, "email.settings", "update");
     const db = await getAdminDb();
     await saveSmtpConfig(db, data);
+
+    await logSecurityAudit(db, {
+      eventType: "sensitive_config_changed",
+      status: "success",
+      userId: user.userId,
+      actorEmail: user.email,
+      resource: "email.settings",
+      action: "update",
+      details: {
+        enabled: data.enabled,
+        host: data.host,
+        port: data.port,
+        encryption: data.encryption,
+      },
+    });
+
     return { success: true, message: "تم حفظ إعدادات البريد بنجاح" };
   });
 
 /**
  * Test SMTP connection (can test unsaved form values or saved database config).
+ * Requires: email.test (update)
  */
 export const testSmtpConnectionFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -86,7 +108,8 @@ export const testSmtpConnectionFn = createServerFn({ method: "POST" })
       })
       .parse(input);
   })
-  .handler(async ({ data }): Promise<TestConnectionResult> => {
+  .handler(async ({ data, context }): Promise<TestConnectionResult> => {
+    await requirePermission(context, "email.test", "update");
     const db = await getAdminDb();
     const saved = await loadSmtpConfig(db);
 
@@ -98,9 +121,7 @@ export const testSmtpConnectionFn = createServerFn({ method: "POST" })
       encryption: data.encryption || saved.encryption,
       username: data.username !== undefined ? data.username : saved.username,
       password:
-        data.password && data.password !== "••••••••"
-          ? data.password
-          : saved.password,
+        data.password && data.password !== "••••••••" ? data.password : saved.password,
       timeoutSeconds: data.timeoutSeconds || saved.timeoutSeconds,
     };
 
@@ -109,6 +130,7 @@ export const testSmtpConnectionFn = createServerFn({ method: "POST" })
 
 /**
  * Send a real test email to verify end-to-end functionality.
+ * Requires: email.test (update)
  */
 export const sendTestEmailFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -119,7 +141,8 @@ export const sendTestEmailFn = createServerFn({ method: "POST" })
       })
       .parse(input);
   })
-  .handler(async ({ data }): Promise<{ success: boolean; message: string }> => {
+  .handler(async ({ data, context }): Promise<{ success: boolean; message: string }> => {
+    await requirePermission(context, "email.test", "update");
     const db = await getAdminDb();
     const result = await dispatchWorkflowEmail(
       db,
@@ -130,7 +153,7 @@ export const sendTestEmailFn = createServerFn({ method: "POST" })
         employeeName: "مسؤول النظام",
         actionDate: new Date().toLocaleString("ar-SA"),
       },
-      { immediate: true }
+      { immediate: true },
     );
 
     if (!result.success) {
@@ -142,16 +165,19 @@ export const sendTestEmailFn = createServerFn({ method: "POST" })
 
 /**
  * Get notification rules.
+ * Requires: email.settings (read)
  */
 export const getEmailRulesFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<EmailRulesConfig> => {
+  .handler(async ({ context }): Promise<EmailRulesConfig> => {
+    await requirePermission(context, "email.settings", "read");
     const db = await getAdminDb();
     return await loadEmailRules(db);
   });
 
 /**
  * Save notification rules.
+ * Requires: email.settings (update)
  */
 export const saveEmailRulesFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -170,14 +196,27 @@ export const saveEmailRulesFn = createServerFn({ method: "POST" })
       })
       .parse(input);
   })
-  .handler(async ({ data }): Promise<{ success: boolean; message: string }> => {
+  .handler(async ({ data, context }): Promise<{ success: boolean; message: string }> => {
+    const user = await requirePermission(context, "email.settings", "update");
     const db = await getAdminDb();
     await saveEmailRules(db, data);
+
+    await logSecurityAudit(db, {
+      eventType: "sensitive_config_changed",
+      status: "success",
+      userId: user.userId,
+      actorEmail: user.email,
+      resource: "email.rules",
+      action: "update",
+      details: data,
+    });
+
     return { success: true, message: "تم حفظ قواعد تشغيل الإشعارات بنجاح" };
   });
 
 /**
  * Get paginated email logs.
+ * Requires: email.logs (read)
  */
 export const getEmailLogsFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -195,7 +234,9 @@ export const getEmailLogsFn = createServerFn({ method: "POST" })
   .handler(
     async ({
       data,
+      context,
     }): Promise<{ items: EmailLogItem[]; total: number; page: number; pageSize: number }> => {
+      await requirePermission(context, "email.logs", "read");
       const db = await getAdminDb();
       let query = db.from("email_logs").select("*", { count: "exact" });
 
@@ -213,12 +254,15 @@ export const getEmailLogsFn = createServerFn({ method: "POST" })
       const from = (data.page - 1) * data.pageSize;
       const to = from + data.pageSize - 1;
 
-      const { data: rows, count, error } = await query
-        .order("created_at", { ascending: false })
-        .range(from, to);
+      const {
+        data: rows,
+        count,
+        error,
+      } = await query.order("created_at", { ascending: false }).range(from, to);
 
       if (error) throw new Error(`تعذر استرجاع سجل البريد: ${error.message}`);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const items: EmailLogItem[] = (rows ?? []).map((r: any) => ({
         id: r.id,
         createdAt: r.created_at,
@@ -249,28 +293,32 @@ export const getEmailLogsFn = createServerFn({ method: "POST" })
         page: data.page,
         pageSize: data.pageSize,
       };
-    }
+    },
   );
 
 /**
  * Resend a failed email.
+ * Requires: email.logs (resend)
  */
 export const resendFailedEmailFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => {
     return z.object({ logId: z.string().uuid() }).parse(input);
   })
-  .handler(async ({ data }): Promise<TestConnectionResult> => {
+  .handler(async ({ data, context }): Promise<TestConnectionResult> => {
+    await requirePermission(context, "email.logs", "resend");
     const db = await getAdminDb();
     return await resendFailedEmail(db, data.logId);
   });
 
 /**
  * Get email templates.
+ * Requires: email.templates (read)
  */
 export const getEmailTemplatesFn = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async (): Promise<EmailTemplate[]> => {
+  .handler(async ({ context }): Promise<EmailTemplate[]> => {
+    await requirePermission(context, "email.templates", "read");
     const db = await getAdminDb();
     const { data, error } = await db
       .from("email_templates")
@@ -279,6 +327,7 @@ export const getEmailTemplatesFn = createServerFn({ method: "GET" })
 
     if (error || !data) return [];
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return data.map((t: any) => ({
       id: t.id,
       name: t.name,
@@ -297,6 +346,7 @@ export const getEmailTemplatesFn = createServerFn({ method: "GET" })
 
 /**
  * Save / update an email template.
+ * Requires: email.templates (update)
  */
 export const saveEmailTemplateFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -315,7 +365,8 @@ export const saveEmailTemplateFn = createServerFn({ method: "POST" })
       })
       .parse(input);
   })
-  .handler(async ({ data }): Promise<{ success: boolean; message: string }> => {
+  .handler(async ({ data, context }): Promise<{ success: boolean; message: string }> => {
+    const user = await requirePermission(context, "email.templates", "update");
     const db = await getAdminDb();
     const row = {
       id: data.id,
@@ -332,11 +383,23 @@ export const saveEmailTemplateFn = createServerFn({ method: "POST" })
 
     const { error } = await db.from("email_templates").upsert([row]);
     if (error) throw new Error(`فشل حفظ قالب البريد: ${error.message}`);
+
+    await logSecurityAudit(db, {
+      eventType: "sensitive_config_changed",
+      status: "success",
+      userId: user.userId,
+      actorEmail: user.email,
+      resource: "email.templates",
+      action: "update",
+      details: { templateId: data.id, eventType: data.eventType },
+    });
+
     return { success: true, message: "تم حفظ قالب البريد بنجاح" };
   });
 
 /**
  * Dispatch workflow email event from any client or server component.
+ * Requires: email.dispatch (create)
  */
 export const dispatchWorkflowEmailFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -375,7 +438,10 @@ export const dispatchWorkflowEmailFn = createServerFn({ method: "POST" })
       })
       .parse(input);
   })
-  .handler(async ({ data }): Promise<{ success: boolean; logIds: string[]; error?: string }> => {
-    const db = await getAdminDb();
-    return await dispatchWorkflowEmail(db, data as WorkflowEmailEvent);
-  });
+  .handler(
+    async ({ data, context }): Promise<{ success: boolean; logIds: string[]; error?: string }> => {
+      await requirePermission(context, "email.dispatch", "create");
+      const db = await getAdminDb();
+      return await dispatchWorkflowEmail(db, data as WorkflowEmailEvent);
+    },
+  );

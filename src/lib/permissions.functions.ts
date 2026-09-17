@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePermission, logSecurityAudit } from "@/lib/server/authorization";
 
 export type SystemUserRole = "admin" | "manager" | "employee";
 
@@ -31,32 +32,11 @@ const userSchema = z.object({
 
 type UserPayload = z.infer<typeof userSchema>;
 
-async function assertAdmin(context: unknown) {
-  const { supabase, userId } = context as {
-    // Avoid expanding the entire generated Supabase schema in every serverFn.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    supabase: any;
-    userId: string;
-  };
-  const { data, error } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "admin")
-    .maybeSingle();
-
-  if (error || !data) {
-    throw new Error("غير مصرح لك بإدارة مستخدمي النظام");
-  }
-}
-
 export const listSystemUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<SystemUser[]> => {
-    await assertAdmin(context);
+    await requirePermission(context, "/permissions", "read");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // The generated Database type is intentionally not on this hot path because
-    // the permission migration may be deployed before regenerated client types.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = supabaseAdmin as any;
 
@@ -113,7 +93,7 @@ export const saveSystemUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((input: unknown) => userSchema.parse(input))
   .handler(async ({ data, context }): Promise<SystemUser> => {
-    await assertAdmin(context);
+    const actor = await requirePermission(context, "/permissions", "update");
     const payload = data as UserPayload;
     if (!payload.id && !payload.password) {
       throw new Error("كلمة المرور مطلوبة عند إضافة مستخدم جديد");
@@ -218,6 +198,51 @@ export const saveSystemUser = createServerFn({ method: "POST" })
           .upsert({ group_id: roleGroup.id, user_id: userId }, { onConflict: "group_id,user_id" });
         if (membershipError) throw new Error(membershipError.message);
       }
+
+      // Security Audit Logging
+      if (created) {
+        await logSecurityAudit(db, {
+          eventType: "user_created",
+          status: "success",
+          userId: actor.userId,
+          actorEmail: actor.email,
+          resource: "user",
+          action: "create",
+          details: { targetUserId: userId, targetEmail: payload.email, role: payload.role },
+        });
+      }
+
+      await logSecurityAudit(db, {
+        eventType: "role_changed",
+        status: "success",
+        userId: actor.userId,
+        actorEmail: actor.email,
+        resource: "user_role",
+        action: "update",
+        details: { targetUserId: userId, newRole: payload.role },
+      });
+
+      if (!payload.isActive) {
+        await logSecurityAudit(db, {
+          eventType: "account_disabled",
+          status: "success",
+          userId: actor.userId,
+          actorEmail: actor.email,
+          resource: "user",
+          action: "update",
+          details: { targetUserId: userId, targetEmail: payload.email },
+        });
+      }
+
+      await logSecurityAudit(db, {
+        eventType: "group_changed",
+        status: "success",
+        userId: actor.userId,
+        actorEmail: actor.email,
+        resource: "permission_group",
+        action: "update",
+        details: { targetUserId: userId, assignedGroup: groupName },
+      });
     } catch (error) {
       if (created && userId) await supabaseAdmin.auth.admin.deleteUser(userId);
       throw error;

@@ -9,6 +9,21 @@ import {
 } from "../src/lib/email/templates.mjs";
 import { translateSmtpError } from "../src/lib/email/smtp-diagnostics.mjs";
 
+process.env["EMAIL_CONFIG_ENCRYPTION_KEY"] = "test-encryption-key-32-chars-ok!!";
+
+test("crypto: fails securely without hardcoded fallback if key is missing", () => {
+  const originalKey = process.env["EMAIL_CONFIG_ENCRYPTION_KEY"];
+  delete process.env["EMAIL_CONFIG_ENCRYPTION_KEY"];
+  try {
+    assert.throws(
+      () => encryptSecret("any-secret"),
+      /Missing required environment secret: EMAIL_CONFIG_ENCRYPTION_KEY/,
+    );
+  } finally {
+    process.env["EMAIL_CONFIG_ENCRYPTION_KEY"] = originalKey;
+  }
+});
+
 test("crypto: encrypts, decrypts, and masks secret correctly", () => {
   const secret = "SuperSecretP@ssword2026!";
   const encrypted = encryptSecret(secret);
