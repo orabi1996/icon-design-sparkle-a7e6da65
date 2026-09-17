@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
+import { MaterialIcon } from '@/components/MaterialIcon';
 import { AppShell } from '@/components/hr/AppShell';
 import { useCompanyWorkspace } from '@/components/hr/CompanyWorkspace';
 import { PageBanner } from '@/components/hr/ui';
@@ -40,8 +41,30 @@ function WorkspaceBody({ screen }: { screen: string }) {
   return <div dir={lang ? 'ltr' : 'rtl'} className="my-4 space-y-4">
     <div className="flex flex-wrap items-center justify-between gap-3"><span className="text-xs font-semibold text-muted-foreground">{active.id} · {t('إدارة الشفتات والدوام', 'Shifts and rosters')}</span><div className="flex gap-2"><Button onClick={() => setLang(lang ? 0 : 1)}>{lang ? 'العربية' : 'English'}</Button><Button onClick={() => { void query.refetch(); }}>{t('تحديث البيانات', 'Refresh data')}</Button></div></div>
     <PageBanner icon={active.icon} title={active.label[lang]!} subtitle={t('تعريفات مؤرخة · جداول معتمدة · حضور قابل للتتبع', 'Effective definitions · Approved rosters · Traceable attendance')} />
-    <nav aria-label={t('شاشات وحدة الدوام', 'Scheduling module screens')} className="flex gap-2 overflow-x-auto rounded-xl border bg-card p-2">{SCREENS.map(s => <Link key={s.key} to={`/shifts/${s.key}` as never} aria-current={s.key === screen ? 'page' : undefined} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold ${s.key === screen ? 'bg-primary text-primary-foreground' : 'hover:bg-secondary'}`}><span className="block text-[10px] opacity-70">{s.id}</span>{s.label[lang]}</Link>)}</nav>
-    {!enabled ? <p role="status" className="rounded-xl border bg-card p-6">{t('وحدة الدوام تنتظر تفعيل إعدادات التشغيل بعد تطبيق ترحيل قاعدة البيانات ومراجعة الصلاحيات.', 'Scheduling is awaiting activation after its database migration and access review.')}</p> : company.isLoading ? <p role="status">{t('تحميل الشركات…', 'Loading companies…')}</p> : company.error ? <p role="alert">{company.error.message}</p> : !selected ? <div className="rounded-xl border bg-card p-6"><p>{t('حدد شركة لها عضوية وصلاحيات قبل إعداد الدوام.', 'Choose a company with membership and access before configuring scheduling.')}</p><Link to="/settings/company" className="text-primary underline">{t('إعدادات الشركة', 'Company settings')}</Link></div> : <>
+    {!enabled ? (
+      <div role="status" className="rounded-2xl border border-blue-200 bg-[#e8f0fe] p-6 text-slate-800 space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="grid size-10 place-items-center rounded-xl bg-[#0b57d0] text-white">
+            <MaterialIcon name="info" size={22} filled />
+          </span>
+          <div>
+            <h3 className="text-sm font-black text-[#0b57d0]">تم نقل وتكامل نظام الشفتات داخل شاشة تهيئة جداول الدوام</h3>
+            <p className="text-xs text-slate-600 mt-0.5">
+              يمكنك إدارة وتهيئة جميع الشفتات والورديات، قوالب أيام العمل، دورات التكرار، والجداول المرئية مباشرة من خلال شاشة التهيئة المركزية.
+            </p>
+          </div>
+        </div>
+        <div className="pt-2">
+          <Link
+            to="/regulations/shifts"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#0b57d0] px-5 py-2.5 text-xs font-extrabold text-white shadow-xs hover:bg-[#0842a0] transition"
+          >
+            <MaterialIcon name="open_in_new" size={16} />
+            <span>الانتقال إلى تهيئة جداول الدوام والورديات</span>
+          </Link>
+        </div>
+      </div>
+    ) : company.isLoading ? <p role="status">{t('تحميل الشركات…', 'Loading companies…')}</p> : company.error ? <p role="alert">{company.error.message}</p> : !selected ? <div className="rounded-xl border bg-card p-6"><p>{t('حدد شركة لها عضوية وصلاحيات قبل إعداد الدوام.', 'Choose a company with membership and access before configuring scheduling.')}</p><Link to="/settings/company" className="text-primary underline">{t('إعدادات الشركة', 'Company settings')}</Link></div> : <>
       <label className="block text-sm font-bold">{t('الشركة', 'Company')}<select value={selected.id} onChange={e => { company.selectCompany(e.target.value); setNotice(null); retry.current = null; }} className="ms-2 rounded-lg border p-2">{company.companies.map(c => <option key={c.id} value={c.id}>{lang ? c.display_name_en : c.display_name}</option>)}</select></label>
       {query.isLoading && <div role="status" className="animate-pulse rounded-xl border bg-card p-8">{t('تحميل الشفتات والنسخ…', 'Loading shifts and versions…')}</div>}
       {query.error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{query.error.message}</p>}
