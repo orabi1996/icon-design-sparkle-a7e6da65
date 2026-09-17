@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useRows, type Row } from "@/lib/hr-db";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/staff/")({
   head: () => ({
@@ -64,9 +65,9 @@ const emptyFilters: Filters = {
 };
 
 const inputClass =
-  "h-9 w-full border border-[#8c8c8c] bg-white px-3 text-[12px] font-medium text-slate-900 outline-none transition focus:border-[#1179bc] focus:ring-1 focus:ring-[#1179bc]/25";
+  "h-9 w-full rounded-xl border border-input bg-background px-3 text-[12px] font-medium text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:opacity-50";
 
-const selectClass = inputClass + " appearance-none pe-8";
+const selectClass = inputClass + " appearance-none pe-8 cursor-pointer";
 
 const normalize = (value: unknown) => String(value ?? "").trim().toLocaleLowerCase("ar");
 
@@ -361,7 +362,7 @@ function StaffList() {
     <div className="mt-4" dir="rtl">
       <form
         onSubmit={submitSearch}
-        className="rounded-lg border border-[#c7ced7] bg-[#eef4ff] px-4 py-5 shadow-md md:px-5"
+        className="rounded-2xl border border-border bg-card p-5 shadow-xs"
       >
         <div className="grid gap-x-3 gap-y-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <FilterField
@@ -458,78 +459,88 @@ function StaffList() {
         <div className="mt-4 flex justify-center">
           <button
             type="submit"
-            className="flex min-w-32 items-center justify-center gap-2 rounded-full bg-gradient-to-l from-[#16a39f] to-[#197bc5] px-8 py-2 text-[12px] font-bold text-white shadow transition hover:brightness-105"
+            className="flex min-w-32 items-center justify-center gap-2 rounded-xl bg-[#0b57d0] hover:bg-[#0842a0] px-8 py-2.5 text-xs font-black text-white shadow-xs transition cursor-pointer"
           >
             بحث
-            <MaterialIcon name="search" size={18} />
+            <MaterialIcon name="search" size={17} />
           </button>
         </div>
       </form>
 
-      <div className="mt-8 flex flex-wrap items-center gap-2" dir="ltr">
-        <div className="relative">
-          <input
-            value={globalSearch}
-            onChange={(event) => setTableSearch(event.target.value)}
-            placeholder="ابحث..."
-            disabled={!appliedFilters}
-            className="h-9 w-52 border border-[#888] bg-white px-3 pe-9 text-right text-[12px] outline-none disabled:bg-slate-100"
-          />
-          <MaterialIcon
-            name="search"
-            size={17}
-            className="pointer-events-none absolute inset-y-0 right-2 my-auto h-fit text-slate-500"
-          />
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3" dir="rtl">
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <input
+              value={globalSearch}
+              onChange={(event) => setTableSearch(event.target.value)}
+              placeholder="ابحث في النتائج..."
+              disabled={!appliedFilters}
+              className="h-9 w-60 rounded-xl border border-input bg-background ps-9 pe-3 text-[12px] font-medium text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:bg-muted/50"
+            />
+            <MaterialIcon
+              name="search"
+              size={17}
+              className="pointer-events-none absolute inset-y-0 left-3 my-auto h-fit text-muted-foreground"
+            />
+          </div>
+          {appliedFilters && (
+            <span className="text-xs font-mono font-bold text-muted-foreground">
+              ({visibleRows.length} موظف)
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={printResults}
-          disabled={!appliedFilters || visibleRows.length === 0}
-          title="تصدير PDF / طباعة"
-          className="grid size-8 place-items-center rounded-md bg-[#15b867] text-white transition hover:brightness-95 disabled:opacity-40"
-        >
-          <MaterialIcon name="picture_as_pdf" size={20} />
-        </button>
-        <button
-          type="button"
-          onClick={exportExcel}
-          disabled={!appliedFilters || visibleRows.length === 0}
-          title="تصدير Excel"
-          className="grid size-8 place-items-center rounded-md bg-[#15b867] text-white transition hover:brightness-95 disabled:opacity-40"
-        >
-          <MaterialIcon name="table_view" size={20} />
-        </button>
-        <button
-          type="button"
-          onClick={exportJson}
-          disabled={!appliedFilters || visibleRows.length === 0}
-          title="تصدير البيانات"
-          className="grid size-8 place-items-center rounded-md bg-[#15b867] text-white transition hover:brightness-95 disabled:opacity-40"
-        >
-          <MaterialIcon name="database" size={20} />
-        </button>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={printResults}
+            disabled={!appliedFilters || visibleRows.length === 0}
+            title="تصدير PDF / طباعة"
+            className="grid size-9 place-items-center rounded-xl border border-input bg-background text-foreground shadow-2xs hover:bg-muted transition cursor-pointer disabled:opacity-40"
+          >
+            <MaterialIcon name="print" size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={exportExcel}
+            disabled={!appliedFilters || visibleRows.length === 0}
+            title="تصدير Excel"
+            className="grid size-9 place-items-center rounded-xl border border-input bg-background text-foreground shadow-2xs hover:bg-muted transition cursor-pointer disabled:opacity-40"
+          >
+            <MaterialIcon name="table_view" size={18} />
+          </button>
+          <button
+            type="button"
+            onClick={exportJson}
+            disabled={!appliedFilters || visibleRows.length === 0}
+            title="تصدير البيانات JSON"
+            className="grid size-9 place-items-center rounded-xl border border-input bg-background text-foreground shadow-2xs hover:bg-muted transition cursor-pointer disabled:opacity-40"
+          >
+            <MaterialIcon name="database" size={18} />
+          </button>
+        </div>
       </div>
 
-      <section className="mt-1 overflow-hidden border border-[#d5d8dc] bg-white">
+      <section className="mt-3 overflow-hidden rounded-2xl border border-border bg-card shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1780px] border-collapse text-center text-[11px]">
             <thead>
-              <tr className="bg-[#034c74] text-white">
+              <tr className="bg-muted/60 text-foreground border-b border-border">
                 {tableColumns.map((column) => (
                   <th
                     key={column.key}
-                    className="h-9 whitespace-nowrap border-l border-white/30 px-2 font-bold"
+                    className="h-10 whitespace-nowrap border-l border-border px-2 font-extrabold"
                   >
                     <span className="flex items-center justify-center gap-2">
-                      <MaterialIcon name="filter_alt" size={15} />
+                      <MaterialIcon name="filter_alt" size={15} className="text-muted-foreground" />
                       {column.label}
                     </span>
                   </th>
                 ))}
               </tr>
-              <tr className="bg-white">
+              <tr className="bg-card border-b border-border/80">
                 {tableColumns.map((column) => (
-                  <th key={column.key} className="h-9 border border-[#d7d7d7] p-1">
+                  <th key={column.key} className="h-9 border-l border-border/60 p-1">
                     {column.type !== "action" && (
                       <span className="relative block">
                         <input
@@ -573,26 +584,28 @@ function StaffList() {
                 pageRows.map((row, rowIndex) => (
                   <tr
                     key={String(row["id"] ?? row["emp_no"] ?? rowIndex)}
-                    className="border-b border-[#dedede] odd:bg-white even:bg-[#f5f6f8]"
+                    className="border-b border-border/60 transition-colors odd:bg-card even:bg-muted/25 hover:bg-primary/5"
                   >
                     {tableColumns.map((column) => (
-                      <td key={column.key} className="h-9 whitespace-nowrap border-l border-[#dedede] px-2">
+                      <td key={column.key} className="h-10 whitespace-nowrap border-l border-border/60 px-2.5 text-foreground font-medium">
                         {column.key === "attendance" ? (
                           <button
                             type="button"
                             title="عرض الحضور والانصراف"
-                            className="text-[#1179bc] transition hover:scale-110"
+                            className="text-[#0b57d0] hover:text-[#0842a0] transition hover:scale-110 cursor-pointer"
                           >
-                            <MaterialIcon name="schedule" size={16} />
+                            <MaterialIcon name="schedule" size={17} />
                           </button>
                         ) : column.key === "financial" ? (
                           <Link
                             to="/payroll"
                             title="عرض البيانات المالية"
-                            className="inline-flex text-[#1179bc] transition hover:scale-110"
+                            className="inline-flex text-[#0b57d0] hover:text-[#0842a0] transition hover:scale-110 cursor-pointer"
                           >
-                            <MaterialIcon name="payments" size={16} />
+                            <MaterialIcon name="payments" size={17} />
                           </Link>
+                        ) : column.key === "emp_no" || column.key === "national_id" ? (
+                          <span className="font-mono">{column.value(row) || "—"}</span>
                         ) : (
                           column.value(row) || "—"
                         )}
@@ -606,34 +619,35 @@ function StaffList() {
         </div>
       </section>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-4 text-[11px] text-slate-600">
-        <div className="flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-4 text-xs font-bold text-muted-foreground">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => setPage((value) => Math.max(1, value - 1))}
             disabled={currentPage <= 1}
-            className="grid size-7 place-items-center disabled:opacity-30"
+            className="grid size-8 place-items-center rounded-lg border border-input bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition disabled:opacity-30 cursor-pointer"
           >
             <MaterialIcon name="chevron_right" size={19} />
           </button>
-          <span className="grid size-8 place-items-center rounded-sm bg-[#d7d7d7] font-bold">
+          <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground font-mono font-bold shadow-2xs">
             {currentPage}
           </span>
           <button
             type="button"
             onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
             disabled={currentPage >= totalPages}
-            className="grid size-7 place-items-center disabled:opacity-30"
+            className="grid size-8 place-items-center rounded-lg border border-input bg-card text-muted-foreground hover:bg-muted hover:text-foreground transition disabled:opacity-30 cursor-pointer"
           >
             <MaterialIcon name="chevron_left" size={19} />
           </button>
-          <span>
-            صفحة {currentPage} من {totalPages} ({visibleRows.length} عنصر)
+          <span className="font-mono text-muted-foreground me-2">
+            صفحة {currentPage} من {totalPages} ({visibleRows.length} موظف)
           </span>
         </div>
 
         <div className="flex items-center gap-1">
-          {[5, 10, 20].map((size) => (
+          <span className="text-xs text-muted-foreground me-1.5">لكل صفحة:</span>
+          {[10, 25, 50, 100].map((size) => (
             <button
               key={size}
               type="button"
@@ -641,10 +655,12 @@ function StaffList() {
                 setPageSize(size);
                 setPage(1);
               }}
-              className={
-                "min-w-8 px-2 py-2 " +
-                (pageSize === size ? "bg-[#d7d7d7] font-bold text-slate-900" : "bg-transparent")
-              }
+              className={cn(
+                "grid size-8 place-items-center rounded-lg text-xs font-mono font-bold transition-all cursor-pointer",
+                pageSize === size
+                  ? "bg-secondary text-primary border border-primary/30"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
             >
               {size}
             </button>
