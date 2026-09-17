@@ -90,18 +90,24 @@ export function EmployeeStatusWidget({
   ];
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-          <MaterialIcon name="badge" size={19} className="text-[#0b57d0]" filled />
-          <span>مؤشرات حالات الموظفين والقوى العاملة</span>
-        </h2>
-        <span className="text-[11px] font-semibold text-slate-400">
-          مقارنة بالفترة السابقة مع إمكانية الفحص التفصيلي
-        </span>
+    <div className="space-y-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-8 place-items-center rounded-xl bg-blue-50 text-[#0b57d0] dark:bg-blue-950/60 dark:text-blue-400">
+            <MaterialIcon name="groups" size={20} filled />
+          </span>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 dark:text-white leading-tight">
+              مؤشرات حالات الموظفين والقوى العاملة
+            </h2>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+              مقارنة بالفترة السابقة مع إمكانية الفحص التفصيلي لكل حالة
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-3">
         {cards.map((c) => (
           <div
             key={c.key}
@@ -114,31 +120,39 @@ export function EmployeeStatusWidget({
                 filterDescription: c.filterDesc,
               })
             }
-            className="group cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-2xs hover:-translate-y-0.5 hover:shadow-md transition-all dark:border-slate-800 dark:bg-slate-900"
+            className="group cursor-pointer rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(60,64,67,0.06)] hover:-translate-y-0.5 hover:shadow-md hover:border-[#0b57d0]/40 transition-all dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between"
           >
-            <div className="flex items-center justify-between">
-              <span className={`grid size-9 place-items-center rounded-xl ${c.tone}`}>
-                <MaterialIcon name={c.icon} size={18} filled />
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 font-mono">
-                {numPercent(c.percent)}
-              </span>
+            <div>
+              <div className="flex items-center justify-between">
+                <span className={`grid size-9 place-items-center rounded-xl ${c.tone} shadow-2xs`}>
+                  <MaterialIcon name={c.icon} size={18} filled />
+                </span>
+                <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-black font-mono text-slate-500 dark:text-slate-400">
+                  {numPercent(c.percent)}
+                </span>
+              </div>
+
+              <p className="mt-3 text-xs font-black text-slate-700 dark:text-slate-300 truncate" title={c.label}>
+                {c.label}
+              </p>
             </div>
 
-            <p className="mt-2.5 text-[11.5px] font-bold text-slate-600 dark:text-slate-400 truncate">
-              {c.label}
-            </p>
-
-            <div className="mt-1 flex items-baseline justify-between">
-              <p className="text-xl font-black text-slate-900 dark:text-white font-mono">
+            <div className="mt-2 flex items-baseline justify-between pt-1 border-t border-slate-100 dark:border-slate-800/80">
+              <p className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
                 {num(c.count)}
               </p>
               <span
-                className={`text-[10px] font-bold font-mono ${
-                  c.trend.startsWith("+") ? "text-emerald-600" : c.trend.startsWith("-") ? "text-rose-600" : "text-slate-400"
+                className={`flex items-center text-[10.5px] font-black font-mono ${
+                  c.trend.startsWith("+")
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : c.trend.startsWith("-")
+                    ? "text-rose-600 dark:text-rose-400"
+                    : "text-slate-400"
                 }`}
               >
-                {c.trend}
+                {c.trend.startsWith("+") && <MaterialIcon name="arrow_upward" size={13} />}
+                {c.trend.startsWith("-") && <MaterialIcon name="arrow_downward" size={13} />}
+                <span>{c.trend}</span>
               </span>
             </div>
           </div>

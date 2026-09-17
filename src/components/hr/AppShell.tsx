@@ -78,7 +78,7 @@ function AuthenticatedShell({ children }: { children: ReactNode }) {
   return (
     <CompanyWorkspaceProvider>
     <div dir="rtl" className="min-h-screen bg-[#f8fafd] text-slate-900 font-sans antialiased">
-      <header className="sticky top-0 z-30 shadow-xs">
+      <header className="sticky top-0 z-40 shadow-xs">
         {/* Google Workspace Style Top App Bar */}
         <div className="flex h-16 items-center gap-4 border-b border-topbar-border bg-topbar px-4 text-topbar-foreground md:px-6">
           <Link to="/" className="flex items-center gap-3 group">
@@ -128,7 +128,7 @@ function AuthenticatedShell({ children }: { children: ReactNode }) {
         <MegaMenu items={nav} />
       </header>
 
-      <main className="min-w-0 px-4 py-6 md:px-8 max-w-[1600px] mx-auto">
+      <main className="min-w-0 px-4 py-6 md:px-8 max-w-[1720px] mx-auto">
         {children}
 
         <footer className="mt-12 mb-6 flex flex-wrap items-center justify-between gap-2 border-t border-slate-200/80 pt-5 text-xs font-semibold text-slate-500">

@@ -77,21 +77,23 @@ export function LiveAttendanceWidget({
   ];
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+    <div className="space-y-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
           <span className="relative flex size-3">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex size-3 rounded-full bg-emerald-500"></span>
           </span>
-          <h2 className="text-sm font-black text-slate-900 dark:text-white">
-            متابعة الحضور والانصراف المباشر (Live Attendance)
-          </h2>
-          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-mono font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {metrics.targetDate}
-          </span>
+          <div>
+            <h2 className="text-sm font-black text-slate-900 dark:text-white leading-tight">
+              متابعة الحضور والانصراف المباشر (Live Attendance)
+            </h2>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+              مؤشرات يومية فورية لبيانات الحضور والانصراف ليوم <span className="font-mono font-bold text-slate-600 dark:text-slate-300">{metrics.targetDate}</span>
+            </p>
+          </div>
         </div>
-        <span className="text-[11px] font-semibold text-slate-400">
+        <span className="text-[11px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">
           انقر على أي بطاقة لعرض تفاصيل الموظفين (Drill Down)
         </span>
       </div>
@@ -127,7 +129,7 @@ export function LiveAttendanceWidget({
               </span>
             </div>
 
-            <p className="mt-3.5 text-xs font-extrabold text-slate-500 dark:text-slate-400">
+            <p className="mt-3 text-xs font-black text-slate-700 dark:text-slate-300">
               {c.label}
             </p>
 
@@ -141,7 +143,15 @@ export function LiveAttendanceWidget({
               </span>
             </div>
 
-            <p className="mt-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">
+            {/* Visual Mini Progress Bar */}
+            <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${c.tone.bar}`}
+                style={{ width: `${Math.min(100, Math.max(0, c.percent))}%` }}
+              />
+            </div>
+
+            <p className="mt-2 text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">
               {c.hint}
             </p>
           </div>

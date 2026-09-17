@@ -1,6 +1,6 @@
 import { MaterialIcon } from "@/components/MaterialIcon";
 import type { GlobalFilters, DatePresetKey, EmployeeRecord } from "../types";
-import { getActiveFilterCount } from "../services/analyticsData";
+import { getActiveFilterCount, num } from "../services/analyticsData";
 
 interface GlobalFilterBarProps {
   filters: GlobalFilters;
@@ -19,6 +19,58 @@ const DATE_PRESETS: { key: DatePresetKey; label: string }[] = [
   { key: "this_year", label: "هذا العام" },
   { key: "custom", label: "مخصص" },
 ];
+
+function FilterDropdown({
+  value,
+  onChange,
+  options,
+  icon,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { value: string; label: string }[];
+  icon: string;
+}) {
+  const isSelected = value !== "all";
+  return (
+    <div className="relative inline-flex items-center">
+      <div
+        className={`flex h-9 items-center gap-1.5 rounded-2xl border px-3 text-xs font-bold transition-all shadow-2xs ${
+          isSelected
+            ? "border-[#0b57d0] bg-blue-50/90 text-[#0b57d0] dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300 ring-1 ring-[#0b57d0]/30"
+            : "border-slate-200/90 bg-slate-50/70 text-slate-700 hover:border-slate-300 hover:bg-white dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300"
+        }`}
+      >
+        <MaterialIcon
+          name={icon}
+          size={16}
+          className={isSelected ? "text-[#0b57d0] dark:text-blue-400" : "text-slate-400"}
+          filled={isSelected}
+        />
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="cursor-pointer appearance-none bg-transparent pr-1 pl-5 text-xs font-bold text-inherit focus:outline-none"
+        >
+          {options.map((opt) => (
+            <option
+              key={opt.value}
+              value={opt.value}
+              className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white"
+            >
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <MaterialIcon
+          name="expand_more"
+          size={16}
+          className="pointer-events-none absolute left-2 text-slate-400"
+        />
+      </div>
+    </div>
+  );
+}
 
 export function GlobalFilterBar({
   filters,
@@ -90,119 +142,102 @@ export function GlobalFilterBar({
     });
   };
 
-  const selectClasses =
-    "h-9 rounded-full border border-slate-200/90 bg-white px-3 text-xs font-bold text-slate-700 shadow-2xs hover:border-[#0b57d0] focus:border-[#0b57d0] focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200";
-
   return (
-    <section className="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900/90 space-y-3.5">
+    <section className="rounded-3xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900/90 space-y-3.5">
       {/* Top row: Filter selectors */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 pe-2 font-black text-xs text-slate-800 dark:text-slate-200 border-e border-slate-200 dark:border-slate-800">
-            <MaterialIcon name="filter_alt" size={19} className="text-[#0b57d0]" filled />
+          {/* Section Badge */}
+          <div className="flex items-center gap-2 pe-3 font-black text-xs text-slate-800 dark:text-slate-200 border-e border-slate-200 dark:border-slate-800">
+            <span className="grid size-7 place-items-center rounded-lg bg-blue-50 text-[#0b57d0] dark:bg-blue-950/60 dark:text-blue-400">
+              <MaterialIcon name="tune" size={17} filled />
+            </span>
             <span>الفلاتر الشاملة</span>
             {activeCount > 0 && (
-              <span className="rounded-full bg-[#0b57d0] px-2 py-0.5 text-[10.5px] font-black text-white">
-                {activeCount}
+              <span className="rounded-full bg-[#0b57d0] px-2 py-0.5 text-[10.5px] font-black font-mono text-white">
+                {num(activeCount)}
               </span>
             )}
           </div>
 
           {/* Branch Filter */}
-          <select
+          <FilterDropdown
             value={filters.branch}
-            onChange={(e) => onChange({ ...filters, branch: e.target.value })}
-            className={selectClasses}
-          >
-            <option value="all">جميع الفروع</option>
-            {branches.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onChange({ ...filters, branch: val })}
+            icon="storefront"
+            options={[
+              { value: "all", label: "جميع الفروع" },
+              ...branches.map((b) => ({ value: b, label: b })),
+            ]}
+          />
 
           {/* Department Filter */}
-          <select
+          <FilterDropdown
             value={filters.department}
-            onChange={(e) => onChange({ ...filters, department: e.target.value })}
-            className={selectClasses}
-          >
-            <option value="all">جميع الأقسام</option>
-            {departments.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onChange({ ...filters, department: val })}
+            icon="domain"
+            options={[
+              { value: "all", label: "جميع الأقسام" },
+              ...departments.map((d) => ({ value: d, label: d })),
+            ]}
+          />
 
           {/* Sector Filter */}
-          <select
+          <FilterDropdown
             value={filters.sector}
-            onChange={(e) => onChange({ ...filters, sector: e.target.value })}
-            className={selectClasses}
-          >
-            <option value="all">جميع القطاعات</option>
-            {sectors.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onChange({ ...filters, sector: val })}
+            icon="corporate_fare"
+            options={[
+              { value: "all", label: "جميع القطاعات" },
+              ...sectors.map((s) => ({ value: s, label: s })),
+            ]}
+          />
 
           {/* Employment Status Filter */}
-          <select
+          <FilterDropdown
             value={filters.status}
-            onChange={(e) => onChange({ ...filters, status: e.target.value })}
-            className={selectClasses}
-          >
-            <option value="all">كل الحالات الوظيفية</option>
-            <option value="نشط">الموظفون المفعلون (نشط)</option>
-            <option value="موقوف">الموقوفون مؤقتاً</option>
-            <option value="منتهي الخدمة">منتهي الخدمة / استقالة</option>
-          </select>
+            onChange={(val) => onChange({ ...filters, status: val })}
+            icon="badge"
+            options={[
+              { value: "all", label: "كل الحالات الوظيفية" },
+              { value: "نشط", label: "الموظفون المفعلون (نشط)" },
+              { value: "موقوف", label: "الموقوفون مؤقتاً" },
+              { value: "منتهي الخدمة", label: "منتهي الخدمة / استقالة" },
+            ]}
+          />
 
           {/* Job Level Filter */}
-          <select
+          <FilterDropdown
             value={filters.jobLevel}
-            onChange={(e) => onChange({ ...filters, jobLevel: e.target.value })}
-            className={selectClasses}
-          >
-            <option value="all">جميع المستويات الوظيفية</option>
-            {jobLevels.map((l) => (
-              <option key={l} value={l}>
-                {l}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onChange({ ...filters, jobLevel: val })}
+            icon="leaderboard"
+            options={[
+              { value: "all", label: "جميع المستويات الوظيفية" },
+              ...jobLevels.map((l) => ({ value: l, label: l })),
+            ]}
+          />
 
           {/* Job Category Filter */}
-          <select
+          <FilterDropdown
             value={filters.jobCategory}
-            onChange={(e) => onChange({ ...filters, jobCategory: e.target.value })}
-            className={selectClasses}
-          >
-            <option value="all">جميع الفئات الوظيفية</option>
-            {jobCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onChange({ ...filters, jobCategory: val })}
+            icon="category"
+            options={[
+              { value: "all", label: "جميع الفئات الوظيفية" },
+              ...jobCategories.map((c) => ({ value: c, label: c })),
+            ]}
+          />
 
           {/* Nationality Filter */}
-          <select
+          <FilterDropdown
             value={filters.nationality}
-            onChange={(e) => onChange({ ...filters, nationality: e.target.value })}
-            className={selectClasses}
-          >
-            <option value="all">جميع الجنسيات</option>
-            {nationalities.map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onChange({ ...filters, nationality: val })}
+            icon="public"
+            options={[
+              { value: "all", label: "جميع الجنسيات" },
+              ...nationalities.map((n) => ({ value: n, label: n })),
+            ]}
+          />
         </div>
 
         {/* Reset button */}
@@ -210,41 +245,47 @@ export function GlobalFilterBar({
           <button
             type="button"
             onClick={onReset}
-            className="flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50/80 px-3 py-1.5 text-xs font-extrabold text-rose-700 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-400 transition"
+            className="flex items-center gap-1.5 rounded-2xl border border-rose-200 bg-rose-50/90 px-3.5 py-1.5 text-xs font-black text-rose-700 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-300 transition shadow-2xs cursor-pointer"
           >
             <MaterialIcon name="restart_alt" size={16} />
-            <span>إعادة تعيين ({activeCount})</span>
+            <span>إعادة تعيين ({num(activeCount)})</span>
           </button>
         )}
       </div>
 
       {/* Bottom row: Date Presets & Custom Date Inputs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-2.5 border-t border-slate-100 dark:border-slate-800/80">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 pe-1">
-            <MaterialIcon name="date_range" size={16} className="text-[#0b57d0]" />
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 text-xs font-black text-slate-600 dark:text-slate-300 pe-1">
+            <MaterialIcon name="calendar_month" size={17} className="text-[#0b57d0]" />
             <span>فترة المؤشرات:</span>
           </span>
-          {DATE_PRESETS.map((p) => {
-            const on = filters.datePreset === p.key;
-            return (
-              <button
-                key={p.key}
-                type="button"
-                onClick={() => handleDatePresetChange(p.key)}
-                className={`rounded-full px-3 py-1 text-xs font-extrabold transition ${
-                  on
-                    ? "bg-[#0b57d0] text-white shadow-2xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-                }`}
-              >
-                {p.label}
-              </button>
-            );
-          })}
+
+          {/* Segmented Control Pill Track */}
+          <div className="flex flex-wrap items-center gap-1 rounded-2xl bg-slate-100/90 p-1 dark:bg-slate-800/70 border border-slate-200/50 dark:border-slate-700/50">
+            {DATE_PRESETS.map((p) => {
+              const on = filters.datePreset === p.key;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => handleDatePresetChange(p.key)}
+                  className={`rounded-xl px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+                    on
+                      ? "bg-white text-[#0b57d0] shadow-2xs dark:bg-slate-900 dark:text-blue-400 font-black ring-1 ring-black/5"
+                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Date Range Inputs */}
+        <div className="flex items-center gap-2 rounded-2xl border border-slate-200/90 bg-slate-50/70 px-3 py-1 dark:border-slate-800 dark:bg-slate-800/60 shadow-2xs">
+          <MaterialIcon name="date_range" size={16} className="text-[#0b57d0]" />
           <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
             <span>من:</span>
             <input
@@ -253,9 +294,10 @@ export function GlobalFilterBar({
               onChange={(e) =>
                 onChange({ ...filters, datePreset: "custom", fromDate: e.target.value })
               }
-              className="h-8 rounded-full border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+              className="bg-transparent font-mono font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
             />
           </label>
+          <span className="text-slate-300 dark:text-slate-600">|</span>
           <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
             <span>إلى:</span>
             <input
@@ -264,7 +306,7 @@ export function GlobalFilterBar({
               onChange={(e) =>
                 onChange({ ...filters, datePreset: "custom", toDate: e.target.value })
               }
-              className="h-8 rounded-full border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+              className="bg-transparent font-mono font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
             />
           </label>
         </div>

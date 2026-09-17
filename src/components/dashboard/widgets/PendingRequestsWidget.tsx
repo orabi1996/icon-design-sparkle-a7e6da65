@@ -44,39 +44,49 @@ export function PendingRequestsWidget({
         </div>
 
         {/* Requests List */}
-        <div className="mt-3 divide-y divide-slate-100 dark:divide-slate-800/80">
+        <div className="mt-3 space-y-1.5">
           {items.map((item) => (
             <Link
               key={item.typeKey}
               to={item.link as never}
-              className="flex items-center justify-between py-2.5 px-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition group"
+              className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition border border-transparent hover:border-slate-200/80 dark:hover:border-slate-800 group"
             >
-              <div className="flex items-center gap-2.5">
-                <span className="grid size-8 place-items-center rounded-lg bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 group-hover:bg-blue-50 group-hover:text-[#0b57d0] transition">
-                  <MaterialIcon name={item.icon} size={17} />
+              <div className="flex items-center gap-3">
+                <span
+                  className={`grid size-9 place-items-center rounded-xl transition ${
+                    item.typeKey === "leaves"
+                      ? "bg-blue-50 text-[#0b57d0] dark:bg-blue-950/60 dark:text-blue-400"
+                      : item.typeKey === "loans"
+                      ? "bg-amber-50 text-[#b06000] dark:bg-amber-950/60 dark:text-amber-400"
+                      : item.typeKey === "permits"
+                      ? "bg-emerald-50 text-[#137333] dark:bg-emerald-950/60 dark:text-emerald-400"
+                      : "bg-purple-50 text-[#6750a4] dark:bg-purple-950/60 dark:text-purple-400"
+                  }`}
+                >
+                  <MaterialIcon name={item.icon} size={18} />
                 </span>
                 <div>
-                  <p className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-[#0b57d0] transition">
+                  <p className="text-xs font-black text-slate-800 dark:text-slate-200 group-hover:text-[#0b57d0] transition">
                     {item.type}
                   </p>
-                  <p className="text-[10.5px] text-slate-400">
+                  <p className="text-[10.5px] text-slate-400 font-medium">
                     متوسط الإنجاز: {item.avgDays}
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 {item.urgent > 0 && (
-                  <span className="rounded-full bg-rose-50 text-rose-700 px-2 py-0.5 text-[10px] font-bold dark:bg-rose-950/60 dark:text-rose-400">
+                  <span className="rounded-full bg-rose-50 text-rose-700 px-2 py-0.5 text-[10px] font-black dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/60">
                     {num(item.urgent)} عاجل
                   </span>
                 )}
                 {item.overdue > 0 && (
-                  <span className="rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-bold dark:bg-amber-950/60 dark:text-amber-400">
+                  <span className="rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-[10px] font-black dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900/60">
                     {num(item.overdue)} متأخر
                   </span>
                 )}
-                <span className="min-w-[28px] text-center rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs font-black font-mono text-slate-900 dark:text-white">
+                <span className="min-w-[28px] text-center rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-black font-mono text-slate-900 dark:text-white">
                   {num(item.count)}
                 </span>
                 <MaterialIcon

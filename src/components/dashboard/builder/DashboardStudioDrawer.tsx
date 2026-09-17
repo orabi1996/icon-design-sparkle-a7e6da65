@@ -347,14 +347,14 @@ export function DashboardStudioDrawer({
       {isOpen && (
         <div
           onClick={() => onOpenChange(false)}
-          className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity"
+          className="fixed left-0 right-0 top-16 md:top-[112px] bottom-0 z-20 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity"
           aria-hidden="true"
         />
       )}
 
-      {/* 2. Side Panel Container (Fixed on the far left) */}
+      {/* 2. Side Panel Container (Fixed on the far left, docked under the header) */}
       <div
-        className="fixed left-0 top-0 bottom-0 z-40 flex pointer-events-auto"
+        className="fixed left-0 top-16 md:top-[112px] bottom-0 z-30 flex pointer-events-auto shadow-2xl"
         dir="rtl"
       >
         {/* ========================================================= */}

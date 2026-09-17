@@ -86,21 +86,21 @@ export function NationalitiesWidget({
                 </span>
               </div>
 
-              <div className="flex items-center gap-4 text-xs font-bold mt-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full bg-[#137333]" />
-                  <span className="text-slate-700 dark:text-slate-300">سعودي ({num(saudiCount)})</span>
+              <div className="flex items-center gap-2.5 text-xs font-bold mt-2">
+                <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 text-emerald-800 dark:text-emerald-300">
+                  <span className="size-2 rounded-full bg-[#137333]" />
+                  <span>سعودي ({num(saudiCount)})</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2.5 rounded-full bg-slate-400" />
-                  <span className="text-slate-500 dark:text-slate-400">وافد ({num(nonSaudiCount)})</span>
+                <div className="flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-slate-600 dark:text-slate-300">
+                  <span className="size-2 rounded-full bg-slate-400" />
+                  <span>وافد ({num(nonSaudiCount)})</span>
                 </div>
               </div>
             </div>
           )}
 
           {/* Nationalities List */}
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {list.slice(0, 5).map((n, idx) => {
               const matched = employees.filter((e) => (e.nationality || "أخرى") === n.nationality);
               return (
@@ -115,25 +115,38 @@ export function NationalitiesWidget({
                       filterDescription: `الموظفون ذوو الجنسية ${n.nationality}`,
                     })
                   }
-                  className="group cursor-pointer rounded-xl p-2 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition flex items-center justify-between"
+                  className="group cursor-pointer rounded-2xl p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition border border-transparent hover:border-slate-200/80 dark:hover:border-slate-800 space-y-1.5"
                 >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="size-2.5 rounded-full"
-                      style={{ backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }}
-                    />
-                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-[#0b57d0] transition">
-                      {n.nationality}
-                    </span>
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="size-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 shadow-2xs"
+                        style={{ backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }}
+                      />
+                      <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-[#0b57d0] transition">
+                        {n.nationality}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 font-mono text-xs">
+                      <span className="font-black text-slate-900 dark:text-white">
+                        {num(n.count)} موظف
+                      </span>
+                      <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10.5px] font-black text-slate-600 dark:text-slate-400">
+                        {numPercent(n.percent)}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2 font-mono text-xs">
-                    <span className="font-black text-slate-900 dark:text-white">
-                      {num(n.count)}
-                    </span>
-                    <span className="text-slate-400 text-[11px]">
-                      ({numPercent(n.percent)})
-                    </span>
+                  {/* Horizontal Proportional Progress Bar */}
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${Math.min(100, Math.max(2, n.percent))}%`,
+                        backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length],
+                      }}
+                    />
                   </div>
                 </div>
               );
