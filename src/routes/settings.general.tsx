@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { Breadcrumbs, PageBanner, Btn } from "@/components/hr/ui";
 import { useSettings, useSaveSettings, type SettingsMap } from "@/lib/hr-db";
+import { EmailSettingsPanel } from "@/components/hr/email/EmailSettingsPanel";
 
 export const Route = createFileRoute("/settings/general")({
   head: () => ({
@@ -332,102 +333,108 @@ function GeneralSettings() {
         </aside>
 
         <div className="space-y-4">
-          {section.groups.map((g, gi) => (
-            <section
-              key={gi}
-              className="overflow-hidden rounded-2xl border border-border bg-card"
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
-                <MaterialIcon name={section.icon} size={19} className="text-primary" filled />
-                <h2 className="text-sm font-bold">{g.title ?? section.label}</h2>
-              </div>
-              <div
-                className={`grid gap-4 p-5 sm:grid-cols-2 ${
-                  (g.cols ?? 2) >= 5
-                    ? "lg:grid-cols-5"
-                    : (g.cols ?? 2) === 4
-                      ? "lg:grid-cols-4"
-                      : (g.cols ?? 2) === 3
-                        ? "lg:grid-cols-3"
-                        : "lg:grid-cols-2"
-                }`}
-              >
-                {g.fields.map((f) => {
-                  if (f.type === "check") {
-                    const on = val(f.key) === "true";
-                    return (
-                      <label
-                        key={f.key}
-                        className="flex cursor-pointer items-start gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2.5"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={(e) => set(f.key, String(e.target.checked))}
-                          className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
-                        />
-                        <span className="text-[12px] font-bold leading-snug text-foreground/85">{f.label}</span>
-                      </label>
-                    );
-                  }
-                  if (f.type === "radio") {
-                    return (
-                      <div key={f.key}>
-                        <span className="mb-1.5 block text-[12px] font-bold text-foreground/80">{f.label}</span>
-                        <div className="flex flex-wrap gap-3">
-                          {f.options.map((o) => (
-                            <label key={o} className="flex items-center gap-1.5 text-[12px] font-bold">
-                              <input
-                                type="radio"
-                                name={`${section.key}-${f.key}`}
-                                checked={val(f.key) === o}
-                                onChange={() => set(f.key, o)}
-                                className="h-4 w-4 accent-[hsl(var(--primary))]"
-                              />
-                              {o}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  }
-                  return (
-                    <label key={f.key} className="block">
-                      <span className="mb-1.5 block text-[12px] font-bold text-foreground/80">{f.label}</span>
-                      {f.type === "select" ? (
-                        <select
-                          className={`${control} appearance-none`}
-                          value={val(f.key)}
-                          onChange={(e) => set(f.key, e.target.value)}
-                        >
-                          {["", ...f.options].map((o) => (
-                            <option key={o} value={o}>
-                              {o || "اختر ...."}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          className={control}
-                          type={f.type ?? "text"}
-                          value={val(f.key)}
-                          onChange={(e) => set(f.key, e.target.value)}
-                          placeholder="اختر ...."
-                        />
-                      )}
-                    </label>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+          {active === "email" ? (
+            <EmailSettingsPanel />
+          ) : (
+            <>
+              {section.groups.map((g, gi) => (
+                <section
+                  key={gi}
+                  className="overflow-hidden rounded-2xl border border-border bg-card"
+                  style={{ boxShadow: "var(--shadow-card)" }}
+                >
+                  <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+                    <MaterialIcon name={section.icon} size={19} className="text-primary" filled />
+                    <h2 className="text-sm font-bold">{g.title ?? section.label}</h2>
+                  </div>
+                  <div
+                    className={`grid gap-4 p-5 sm:grid-cols-2 ${
+                      (g.cols ?? 2) >= 5
+                        ? "lg:grid-cols-5"
+                        : (g.cols ?? 2) === 4
+                          ? "lg:grid-cols-4"
+                          : (g.cols ?? 2) === 3
+                            ? "lg:grid-cols-3"
+                            : "lg:grid-cols-2"
+                    }`}
+                  >
+                    {g.fields.map((f) => {
+                      if (f.type === "check") {
+                        const on = val(f.key) === "true";
+                        return (
+                          <label
+                            key={f.key}
+                            className="flex cursor-pointer items-start gap-2 rounded-xl border border-border bg-secondary/40 px-3 py-2.5"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={on}
+                              onChange={(e) => set(f.key, String(e.target.checked))}
+                              className="mt-0.5 h-4 w-4 accent-[hsl(var(--primary))]"
+                            />
+                            <span className="text-[12px] font-bold leading-snug text-foreground/85">{f.label}</span>
+                          </label>
+                        );
+                      }
+                      if (f.type === "radio") {
+                        return (
+                          <div key={f.key}>
+                            <span className="mb-1.5 block text-[12px] font-bold text-foreground/80">{f.label}</span>
+                            <div className="flex flex-wrap gap-3">
+                              {f.options.map((o) => (
+                                <label key={o} className="flex items-center gap-1.5 text-[12px] font-bold">
+                                  <input
+                                    type="radio"
+                                    name={`${section.key}-${f.key}`}
+                                    checked={val(f.key) === o}
+                                    onChange={() => set(f.key, o)}
+                                    className="h-4 w-4 accent-[hsl(var(--primary))]"
+                                  />
+                                  {o}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return (
+                        <label key={f.key} className="block">
+                          <span className="mb-1.5 block text-[12px] font-bold text-foreground/80">{f.label}</span>
+                          {f.type === "select" ? (
+                            <select
+                              className={`${control} appearance-none`}
+                              value={val(f.key)}
+                              onChange={(e) => set(f.key, e.target.value)}
+                            >
+                              {["", ...f.options].map((o) => (
+                                <option key={o} value={o}>
+                                  {o || "اختر ...."}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              className={control}
+                              type={f.type ?? "text"}
+                              value={val(f.key)}
+                              onChange={(e) => set(f.key, e.target.value)}
+                              placeholder="اختر ...."
+                            />
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
 
-          <div className="flex justify-center pb-6">
-            <Btn icon="save" variant="teal" onClick={submit}>
-              {save.isPending || isLoading ? "جارٍ الحفظ..." : "حفظ"}
-            </Btn>
-          </div>
+              <div className="flex justify-center pb-6">
+                <Btn icon="save" variant="teal" onClick={submit}>
+                  {save.isPending || isLoading ? "جارٍ الحفظ..." : "حفظ"}
+                </Btn>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

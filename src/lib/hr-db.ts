@@ -54,7 +54,9 @@ export type HrTable =
   | "permission_group_members"
   | "permission_rules"
   | "permission_scopes"
-  | "permission_features";
+  | "permission_features"
+  | "email_logs"
+  | "email_templates";
 
 export type RowFilters = Record<string, string | number | boolean>;
 

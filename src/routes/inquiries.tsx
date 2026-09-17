@@ -6,6 +6,7 @@ import { MaterialIcon } from "@/components/MaterialIcon";
 import { Breadcrumbs, Btn, Card, Field, Input, PageBanner, Select } from "@/components/hr/ui";
 import { CrudTable } from "@/components/hr/CrudTable";
 import { useRows, useSaveRow, useDeleteRow } from "@/lib/hr-db";
+import { notifyWorkflow } from "@/lib/email/dispatcher";
 
 export const Route = createFileRoute("/inquiries")({
   head: () => ({
@@ -106,6 +107,16 @@ function SendTab() {
         source: "تلقائي",
         inquiry_date: date,
         entry_date: date,
+      });
+
+      notifyWorkflow({
+        eventType: "inquiry_issued",
+        requestType: "مساءلة إدارية",
+        employeeId: r["employee_id"],
+        employeeName: r["employee_name"],
+        inquiryName: name,
+        inquiryType: "غياب",
+        inquiryDate: date,
       });
     }
     toast.success(`تم إرسال ${targets.length} مسائلة`);

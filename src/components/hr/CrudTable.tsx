@@ -64,6 +64,7 @@ export function CrudTable({
   ascending,
   filters,
   toolbarExtra,
+  onAfterSave,
 }: {
   table: HrTable;
   title: string;
@@ -75,6 +76,7 @@ export function CrudTable({
   /** fixed column values: used to scope the list and stamped on new rows */
   filters?: RowFilters;
   toolbarExtra?: ReactNode;
+  onAfterSave?: (draft: Row, result?: Row) => void;
 }) {
   const {
     data: rows = [],
@@ -110,7 +112,14 @@ export function CrudTable({
   const submit = async () => {
     const missing = formFields.find((f) => f.required && !String(draft?.[f.key] ?? "").trim());
     if (missing) return;
-    await save.mutateAsync(draft as Row);
+    const res = await save.mutateAsync(draft as Row);
+    if (onAfterSave) {
+      try {
+        onAfterSave(draft as Row, res);
+      } catch (err) {
+        console.warn("[CrudTable] onAfterSave handler error:", err);
+      }
+    }
     setDraft(null);
   };
 

@@ -3,6 +3,7 @@ import { AppShell } from "@/components/hr/AppShell";
 import { Breadcrumbs, PageBanner } from "@/components/hr/ui";
 import { CrudTable } from "@/components/hr/CrudTable";
 import { useRows } from "@/lib/hr-db";
+import { notifyWorkflow } from "@/lib/email/dispatcher";
 
 export const Route = createFileRoute("/leaves")({
   head: () => ({
@@ -34,6 +35,43 @@ function Leaves() {
           table="leave_requests"
           title="طلبات الأجازات"
           addLabel="إضافة طلب أجازة"
+          onAfterSave={(row, res) => {
+            const emp = employees.find((e) => String(e["full_name"]) === String(row["employee_name"]));
+            const st = String(row["status"] || "بانتظار الموافقة");
+            const evType =
+              st === "معتمدة" ? "final_approved" : st === "مرفوضة" ? "stage_rejected" : "request_created";
+
+            notifyWorkflow({
+              eventType: evType,
+              requestId: String(res?.["id"] || row["id"] || ""),
+              requestNumber: res?.["id"] || Date.now(),
+              requestType: String(row["leave_type"] || "طلب إجازة"),
+              employeeId: emp?.["id"],
+              employeeName: String(row["employee_name"] || ""),
+              employeeCode: emp?.["emp_no"],
+              leaveFrom: String(row["from_date"] || ""),
+              leaveTo: String(row["to_date"] || ""),
+              days: row["days"],
+              currentStatus: st,
+              currentStage: "إدارة الموارد البشرية",
+              actionDate: new Date().toLocaleDateString("ar-SA"),
+            });
+
+            if (evType === "request_created") {
+              notifyWorkflow({
+                eventType: "stage_assigned",
+                requestId: String(res?.["id"] || row["id"] || ""),
+                requestNumber: res?.["id"] || Date.now(),
+                requestType: String(row["leave_type"] || "طلب إجازة"),
+                employeeId: emp?.["id"],
+                employeeName: String(row["employee_name"] || ""),
+                employeeCode: emp?.["emp_no"],
+                currentStage: "المدير المباشر",
+                actionUrl: typeof window !== "undefined" ? `${window.location.origin}/leaves` : "/leaves",
+                actionDate: new Date().toLocaleDateString("ar-SA"),
+              });
+            }
+          }}
           fields={[
             { key: "employee_name", label: "الموظف", type: "select", options: names, required: true },
             {

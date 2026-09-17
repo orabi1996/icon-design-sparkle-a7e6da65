@@ -4,6 +4,7 @@ import { AppShell } from "@/components/hr/AppShell";
 import { Breadcrumbs } from "@/components/hr/ui";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useRows, useSaveRow, useDeleteRow, type Row } from "@/lib/hr-db";
+import { notifyWorkflow } from "@/lib/email/dispatcher";
 
 export const Route = createFileRoute("/approval-requests")({
   head: () => ({
@@ -167,18 +168,104 @@ function ApprovalRequestsPage() {
     if (!draft) return;
     if (!String(draft["employee_name"] ?? "").trim()) return;
     if (!String(draft["request_type"] ?? "").trim()) return;
-    await save.mutateAsync(draft);
+    const saved = await save.mutateAsync(draft);
+
+    const reqNumber = saved?.["request_number"] || draft["request_number"] || Date.now();
+    notifyWorkflow({
+      eventType: "request_created",
+      requestId: String(saved?.["id"] || ""),
+      requestNumber: reqNumber,
+      requestType: String(draft["request_type"]),
+      employeeId: draft["employee_id"],
+      employeeName: draft["employee_name"],
+      employeeCode: draft["emp_no"],
+      currentStage: draft["awaiting_stage"] || "المدير المباشر",
+      currentStatus: "بانتظار الاعتماد",
+      actionDate: new Date().toLocaleDateString("ar-SA"),
+    });
+
+    notifyWorkflow({
+      eventType: "stage_assigned",
+      requestId: String(saved?.["id"] || ""),
+      requestNumber: reqNumber,
+      requestType: String(draft["request_type"]),
+      employeeId: draft["employee_id"],
+      employeeName: draft["employee_name"],
+      employeeCode: draft["emp_no"],
+      currentStage: draft["awaiting_stage"] || "المدير المباشر",
+      approverName: draft["awaiting_approver_name"] || draft["direct_manager_name"],
+      actionUrl: typeof window !== "undefined" ? `${window.location.origin}/approval-requests` : "/approval-requests",
+      actionDate: new Date().toLocaleDateString("ar-SA"),
+    });
+
     setDraft(null);
   };
 
   const approve = async (r: Row) => {
+    const chain = String(r["approval_chain"] || "")
+      .split(/[,،\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const currentStage = String(r["awaiting_stage"] || "المدير المباشر");
+    const currentIndex = chain.indexOf(currentStage);
+
+    const hasNextStage = currentIndex >= 0 && currentIndex < chain.length - 1;
+    const nextStage = hasNextStage ? chain[currentIndex + 1]! : null;
+    const nextStatus = hasNextStage ? "pending" : "approved";
+
     await save.mutateAsync({
       ...r,
-      status: "approved",
+      status: nextStatus,
+      awaiting_stage: nextStage || currentStage,
       decision_at: new Date().toISOString(),
+      decision_by: "المشرف",
     });
+
+    if (hasNextStage && nextStage) {
+      notifyWorkflow({
+        eventType: "stage_approved",
+        requestId: String(r["id"]),
+        requestNumber: r["request_number"],
+        requestType: String(r["request_type"]),
+        employeeId: r["employee_id"],
+        employeeName: r["employee_name"],
+        employeeCode: r["emp_no"],
+        previousStage: currentStage,
+        currentStage: nextStage,
+        actionBy: "المشرف",
+        actionDate: new Date().toLocaleDateString("ar-SA"),
+      });
+
+      notifyWorkflow({
+        eventType: "stage_assigned",
+        requestId: String(r["id"]),
+        requestNumber: r["request_number"],
+        requestType: String(r["request_type"]),
+        employeeId: r["employee_id"],
+        employeeName: r["employee_name"],
+        employeeCode: r["emp_no"],
+        currentStage: nextStage,
+        actionUrl: typeof window !== "undefined" ? `${window.location.origin}/approval-requests` : "/approval-requests",
+        actionDate: new Date().toLocaleDateString("ar-SA"),
+      });
+    } else {
+      notifyWorkflow({
+        eventType: "final_approved",
+        requestId: String(r["id"]),
+        requestNumber: r["request_number"],
+        requestType: String(r["request_type"]),
+        employeeId: r["employee_id"],
+        employeeName: r["employee_name"],
+        employeeCode: r["emp_no"],
+        currentStage: currentStage,
+        actionBy: "المشرف",
+        actionDate: new Date().toLocaleDateString("ar-SA"),
+      });
+    }
+
     setOpenMenu(null);
   };
+
   const reject = async (r: Row) => {
     const reason = prompt("سبب الرفض؟") ?? "";
     await save.mutateAsync({
@@ -186,7 +273,23 @@ function ApprovalRequestsPage() {
       status: "rejected",
       decision_at: new Date().toISOString(),
       decision_reason: reason,
+      decision_by: "المشرف",
     });
+
+    notifyWorkflow({
+      eventType: "stage_rejected",
+      requestId: String(r["id"]),
+      requestNumber: r["request_number"],
+      requestType: String(r["request_type"]),
+      employeeId: r["employee_id"],
+      employeeName: r["employee_name"],
+      employeeCode: r["emp_no"],
+      currentStage: r["awaiting_stage"] || "مرحلة الاعتماد",
+      actionBy: "المشرف",
+      rejectionReason: reason || "لم يتم تحديد سبب",
+      actionDate: new Date().toLocaleDateString("ar-SA"),
+    });
+
     setOpenMenu(null);
   };
 

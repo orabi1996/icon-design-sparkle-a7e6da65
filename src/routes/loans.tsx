@@ -6,6 +6,7 @@ import { MaterialIcon } from "@/components/MaterialIcon";
 import { Breadcrumbs, Btn, Card, Field, PageBanner } from "@/components/hr/ui";
 import { CrudTable } from "@/components/hr/CrudTable";
 import { money, useRows, useSaveRow, type Row } from "@/lib/hr-db";
+import { notifyWorkflow } from "@/lib/email/dispatcher";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
@@ -145,7 +146,7 @@ function AddTab() {
     if (!emp) { toast.error("اختر الموظف أولاً"); return; }
     if (!Number(form["amount"])) { toast.error("أدخل مبلغ السلفة"); return; }
     const d = new Date(String(form["request_date"] || today()));
-    await save.mutateAsync({
+    const saved = await save.mutateAsync({
       ...form,
       employee_id: emp["id"],
       employee_name: emp["full_name"],
@@ -164,6 +165,35 @@ function AddTab() {
       year: d.getFullYear(),
       month: d.getMonth() + 1,
     });
+
+    notifyWorkflow({
+      eventType: "request_created",
+      requestId: String(saved?.["id"] || ""),
+      requestNumber: saved?.["id"] || Date.now(),
+      requestType: String(form["loan_type"] || "طلب سلفة مالية"),
+      employeeId: String(emp["id"]),
+      employeeName: String(emp["full_name"]),
+      employeeCode: String(emp["emp_no"]),
+      amount: form["amount"],
+      currentStage: form["stage"] || "مدير مباشر",
+      currentStatus: form["request_status"] || "بانتظار الموافقة",
+      actionDate: today(),
+    });
+
+    notifyWorkflow({
+      eventType: "stage_assigned",
+      requestId: String(saved?.["id"] || ""),
+      requestNumber: saved?.["id"] || Date.now(),
+      requestType: String(form["loan_type"] || "طلب سلفة مالية"),
+      employeeId: String(emp["id"]),
+      employeeName: String(emp["full_name"]),
+      employeeCode: String(emp["emp_no"]),
+      amount: form["amount"],
+      currentStage: form["stage"] || "مدير مباشر",
+      actionUrl: typeof window !== "undefined" ? `${window.location.origin}/loans` : "/loans",
+      actionDate: today(),
+    });
+
     setEmpId("");
   };
 
