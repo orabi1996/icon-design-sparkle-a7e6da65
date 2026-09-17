@@ -1,6 +1,9 @@
 import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { DrillDownData } from "../types";
 import { num } from "../services/analyticsData";
 import { exportToExcel } from "../export/exportUtils";
@@ -54,66 +57,70 @@ export function DrillDownDrawer({ data, onClose }: DrillDownDrawerProps) {
       aria-modal="true"
       className="fixed inset-0 z-50 flex justify-end bg-slate-900/50 backdrop-blur-xs transition-opacity"
     >
-      <div className="flex h-full w-full max-w-3xl flex-col bg-white shadow-2xl dark:bg-slate-900 border-s border-slate-200 dark:border-slate-800 animate-in slide-in-from-left duration-200">
+      <div className="flex h-full w-full max-w-3xl flex-col bg-card shadow-2xl border-s border-border animate-in slide-in-from-left duration-200 text-card-foreground">
         {/* Drawer Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 p-5 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90">
+        <div className="flex items-center justify-between border-b border-border p-5 bg-muted/40">
           <div className="flex items-center gap-3">
             <span className="grid size-11 place-items-center rounded-2xl bg-[#e8f0fe] text-[#0b57d0] dark:bg-blue-950/60 dark:text-blue-400">
               <MaterialIcon name="manage_search" size={24} filled />
             </span>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                <h3 className="text-base font-black text-foreground">
                   {data.title}
                 </h3>
-                <span className="rounded-full bg-[#0b57d0] px-2.5 py-0.5 text-xs font-black text-white font-mono">
+                <Badge variant="default" className="font-mono text-xs font-black">
                   {num(data.count)}
-                </span>
+                </Badge>
               </div>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-xs font-semibold text-muted-foreground mt-0.5">
                 {data.filterDescription || "استكشاف تفاصيل السجلات المكونة للمؤشر"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={handleExport}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-extrabold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+              className="gap-1.5 rounded-xl font-extrabold text-xs"
               title="تصدير القائمة إلى Excel"
             >
               <MaterialIcon name="download" size={16} />
               <span>تصدير Excel</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={onClose}
-              className="grid size-9 place-items-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+              className="size-9 rounded-xl text-muted-foreground hover:text-foreground"
             >
               <MaterialIcon name="close" size={20} />
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Search bar inside drawer */}
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+        <div className="p-4 border-b border-border flex items-center justify-between gap-3">
           <div className="relative flex-1">
             <MaterialIcon
               name="search"
               size={18}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
-            <input
+            <Input
               type="text"
               placeholder="ابحث بالاسم، الرقم الوظيفي، القسم، أو المسمى..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pe-10 ps-4 text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:border-[#0b57d0] focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+              className="h-10 w-full rounded-xl bg-muted/30 pe-10 ps-4 text-xs font-bold"
             />
           </div>
-          <span className="text-xs font-bold text-slate-500 font-mono whitespace-nowrap">
+          <span className="text-xs font-bold text-muted-foreground font-mono whitespace-nowrap">
             {num(filteredEmployees.length)} موظف
           </span>
         </div>
@@ -167,19 +174,20 @@ export function DrillDownDrawer({ data, onClose }: DrillDownDrawerProps) {
                         {emp.job_title || "—"}
                       </td>
                       <td className="py-3 px-3.5">
-                        <span
-                          className={`inline-flex rounded-full px-2 py-0.5 text-[10.5px] font-extrabold ${
+                        <Badge
+                          variant="outline"
+                          className={`text-[10.5px] font-bold ${
                             emp.attendance_status === "حاضر"
-                              ? "bg-emerald-50 text-[#137333] dark:bg-emerald-950/60 dark:text-emerald-400"
+                              ? "bg-emerald-50 text-[#137333] border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-900"
                               : emp.attendance_status === "متأخر"
-                              ? "bg-amber-50 text-[#b06000] dark:bg-amber-950/60 dark:text-amber-400"
+                              ? "bg-amber-50 text-[#b06000] border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900"
                               : emp.attendance_status === "في إجازة"
-                              ? "bg-purple-50 text-[#6750a4] dark:bg-purple-950/60 dark:text-purple-400"
-                              : "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                              ? "bg-purple-50 text-[#6750a4] border-purple-200 dark:bg-purple-950/60 dark:text-purple-400 dark:border-purple-900"
+                              : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-400 dark:border-rose-900"
                           }`}
                         >
                           {emp.attendance_status || "غير مسجل"}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="py-3 px-3.5 font-mono text-[11px] text-slate-500 dark:text-slate-400">
                         {emp.check_in ? (

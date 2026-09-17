@@ -1,9 +1,19 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import type { WidgetProps } from "../types";
 import { computeNationalitiesBreakdown, num, numPercent } from "../services/analyticsData";
 
 const DONUT_COLORS = ["#137333", "#0b57d0", "#d97706", "#7c3aed", "#ba1a1a"];
+const PROGRESS_BAR_COLORS = [
+  "bg-emerald-600",
+  "bg-blue-600",
+  "bg-amber-600",
+  "bg-purple-600",
+  "bg-rose-600",
+];
 
 export function NationalitiesWidget({
   employees,
@@ -21,18 +31,18 @@ export function NationalitiesWidget({
   ];
 
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between h-full">
+    <Card className="rounded-3xl border-border bg-card p-5 shadow-sm flex flex-col justify-between h-full text-card-foreground">
       <div>
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-border pb-3.5">
           <div className="flex items-center gap-2.5">
             <span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-[#137333] dark:bg-emerald-950/60 dark:text-emerald-400">
               <MaterialIcon name="public" size={20} filled />
             </span>
             <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              <h3 className="text-sm font-black text-foreground">
                 الجنسيات ونسبة السعودة والتوطين
               </h3>
-              <p className="text-[11px] font-medium text-slate-400">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 توزيع الكفاءات الوطنية والوافدة ومعدلات الامتثال للتوطين
               </p>
             </div>
@@ -42,7 +52,7 @@ export function NationalitiesWidget({
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
           {/* Donut Chart for Saudization */}
           {saudizationEnabled && (
-            <div className="relative flex flex-col items-center justify-center p-2 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40">
+            <div className="relative flex flex-col items-center justify-center p-2 rounded-2xl bg-muted/40 border border-border/50">
               <div className="h-44 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -61,9 +71,9 @@ export function NationalitiesWidget({
                         if (active && payload && payload.length) {
                           const item = payload[0]!.payload;
                           return (
-                            <div className="rounded-xl border border-slate-200 bg-white p-2 text-xs font-bold text-right shadow-md dark:border-slate-700 dark:bg-slate-800">
-                              <p className="text-slate-900 dark:text-white">{item.name}</p>
-                              <p className="font-mono text-[#0b57d0]">
+                            <div className="rounded-xl border border-border bg-popover p-2 text-xs font-bold text-right shadow-md text-popover-foreground">
+                              <p className="text-foreground">{item.name}</p>
+                              <p className="font-mono text-primary">
                                 {num(item.value)} موظف
                               </p>
                             </div>
@@ -78,23 +88,23 @@ export function NationalitiesWidget({
 
               {/* Center Donut Label */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none pb-4">
-                <span className="text-2xl font-black font-mono text-[#137333] dark:text-emerald-400">
+                <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
                   {numPercent(saudizationRate)}
                 </span>
-                <span className="text-[10px] font-extrabold text-slate-400">
+                <span className="text-[10px] font-extrabold text-muted-foreground">
                   معدل التوطين
                 </span>
               </div>
 
               <div className="flex items-center gap-2.5 text-xs font-bold mt-2">
-                <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 text-emerald-800 dark:text-emerald-300">
-                  <span className="size-2 rounded-full bg-[#137333]" />
+                <Badge variant="outline" className="gap-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900">
+                  <span className="size-2 rounded-full bg-emerald-600" />
                   <span>سعودي ({num(saudiCount)})</span>
-                </div>
-                <div className="flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-slate-600 dark:text-slate-300">
+                </Badge>
+                <Badge variant="outline" className="gap-1.5 bg-secondary text-secondary-foreground">
                   <span className="size-2 rounded-full bg-slate-400" />
                   <span>وافد ({num(nonSaudiCount)})</span>
-                </div>
+                </Badge>
               </div>
             </div>
           )}
@@ -115,45 +125,41 @@ export function NationalitiesWidget({
                       filterDescription: `الموظفون ذوو الجنسية ${n.nationality}`,
                     })
                   }
-                  className="group cursor-pointer rounded-2xl p-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition border border-transparent hover:border-slate-200/80 dark:hover:border-slate-800 space-y-1.5"
+                  className="group cursor-pointer rounded-2xl p-2.5 hover:bg-muted/50 transition border border-transparent hover:border-border space-y-1.5"
                 >
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <span
-                        className="size-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 shadow-2xs"
+                        className="size-2.5 rounded-full ring-2 ring-background shadow-2xs"
                         style={{ backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length] }}
                       />
-                      <span className="font-bold text-slate-800 dark:text-slate-200 group-hover:text-[#0b57d0] transition">
+                      <span className="font-bold text-foreground group-hover:text-primary transition">
                         {n.nationality}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2 font-mono text-xs">
-                      <span className="font-black text-slate-900 dark:text-white">
+                      <span className="font-black text-foreground">
                         {num(n.count)} موظف
                       </span>
-                      <span className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-[10.5px] font-black text-slate-600 dark:text-slate-400">
+                      <Badge variant="secondary" className="font-mono text-[10.5px] font-black px-2 py-0.5">
                         {numPercent(n.percent)}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
 
                   {/* Horizontal Proportional Progress Bar */}
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${Math.min(100, Math.max(2, n.percent))}%`,
-                        backgroundColor: DONUT_COLORS[idx % DONUT_COLORS.length],
-                      }}
-                    />
-                  </div>
+                  <Progress
+                    value={Math.min(100, Math.max(2, n.percent))}
+                    className="h-1.5 bg-muted"
+                    indicatorClassName={PROGRESS_BAR_COLORS[idx % PROGRESS_BAR_COLORS.length] ?? "bg-primary"}
+                  />
                 </div>
               );
             })}
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

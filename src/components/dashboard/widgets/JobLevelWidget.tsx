@@ -8,6 +8,7 @@ import {
   Cell,
 } from "recharts";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { Card } from "@/components/ui/card";
 import type { WidgetProps } from "../types";
 import { computeJobLevelBreakdown, num } from "../services/analyticsData";
 
@@ -17,18 +18,18 @@ export function JobLevelWidget({ employees, onDrillDown }: WidgetProps) {
   const data = computeJobLevelBreakdown(employees);
 
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between h-full">
+    <Card className="rounded-3xl border-border bg-card p-5 shadow-sm flex flex-col justify-between h-full text-card-foreground">
       <div>
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-border pb-3.5">
           <div className="flex items-center gap-2.5">
             <span className="grid size-9 place-items-center rounded-xl bg-purple-50 text-[#6750a4] dark:bg-purple-950/60 dark:text-purple-400">
               <MaterialIcon name="stacked_bar_chart" size={20} filled />
             </span>
             <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              <h3 className="text-sm font-black text-foreground">
                 توزيع المستويات الوظيفية
               </h3>
-              <p className="text-[11px] font-medium text-slate-400">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 توزيع الكوادر حسب التسلسل الهرمي والمستويات الإدارية
               </p>
             </div>
@@ -37,7 +38,7 @@ export function JobLevelWidget({ employees, onDrillDown }: WidgetProps) {
 
         <div className="mt-4 h-60 w-full">
           {data.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-xs text-slate-400">
+            <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
               لا توجد بيانات مستويات مطابقة
             </div>
           ) : (
@@ -53,7 +54,7 @@ export function JobLevelWidget({ employees, onDrillDown }: WidgetProps) {
                   type="category"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fontSize: 11, fill: "#64748b", fontWeight: 700 }}
+                  tick={{ fontSize: 11, fill: "currentColor", className: "text-muted-foreground font-bold" }}
                   width={90}
                 />
                 <Tooltip
@@ -62,11 +63,11 @@ export function JobLevelWidget({ employees, onDrillDown }: WidgetProps) {
                     if (active && payload && payload.length) {
                       const item = payload[0]!.payload;
                       return (
-                        <div className="rounded-2xl border border-slate-200 bg-white p-2.5 shadow-md text-right dark:border-slate-700 dark:bg-slate-800">
-                          <p className="text-xs font-black text-slate-900 dark:text-white">
+                        <div className="rounded-2xl border border-border bg-popover p-2.5 shadow-md text-right text-popover-foreground">
+                          <p className="text-xs font-black text-foreground">
                             {item.level}
                           </p>
-                          <p className="text-xs font-mono font-bold text-[#0b57d0]">
+                          <p className="text-xs font-mono font-bold text-primary">
                             {num(item.count)} موظف ({item.percent}%)
                           </p>
                         </div>
@@ -103,6 +104,6 @@ export function JobLevelWidget({ employees, onDrillDown }: WidgetProps) {
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

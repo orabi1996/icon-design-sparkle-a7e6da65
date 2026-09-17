@@ -1,6 +1,10 @@
 import { MaterialIcon } from "@/components/MaterialIcon";
 import type { WidgetProps } from "../types";
 import { computeLiveAttendance, num, numPercent } from "../services/analyticsData";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 export function LiveAttendanceWidget({
   employees,
@@ -100,7 +104,7 @@ export function LiveAttendanceWidget({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <div
+          <Card
             key={c.key}
             onClick={() =>
               onDrillDown({
@@ -111,50 +115,53 @@ export function LiveAttendanceWidget({
                 filterDescription: c.filterDesc,
               })
             }
-            className={`group relative cursor-pointer overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_4px_20px_0_rgba(60,64,67,0.12)] dark:border-slate-800 dark:bg-slate-900 ${c.tone.border}`}
+            className={cn(
+              "group relative cursor-pointer overflow-hidden rounded-3xl border border-border/80 bg-card p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+              c.tone.border
+            )}
           >
-            <span className={`absolute inset-x-0 top-0 h-1.5 ${c.tone.bar}`} />
+            <span className={cn("absolute inset-x-0 top-0 h-1.5", c.tone.bar)} />
 
             <div className="flex items-center justify-between">
               <span
-                className={`grid size-11 place-items-center rounded-2xl ${c.tone.bg} ${c.tone.text} shadow-2xs`}
+                className={cn("grid size-11 place-items-center rounded-2xl shadow-2xs", c.tone.bg, c.tone.text)}
               >
                 <MaterialIcon name={c.icon} size={22} filled />
               </span>
 
-              <span
-                className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-black font-mono ${c.tone.bg} ${c.tone.text}`}
+              <Badge
+                variant="secondary"
+                className={cn("rounded-full px-2.5 py-0.5 text-xs font-black font-mono border-0", c.tone.bg, c.tone.text)}
               >
-                <span>{numPercent(c.percent)}</span>
-              </span>
+                {numPercent(c.percent)}
+              </Badge>
             </div>
 
-            <p className="mt-3 text-xs font-black text-slate-700 dark:text-slate-300">
+            <p className="mt-3 text-xs font-black text-foreground">
               {c.label}
             </p>
 
             <div className="mt-1 flex items-baseline justify-between">
-              <p className="text-3xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
+              <p className="text-3xl font-black tracking-tight text-foreground font-mono">
                 {num(c.count)}
               </p>
-              <span className="text-[10.5px] font-bold text-slate-400 group-hover:text-[#0b57d0] transition flex items-center gap-0.5">
+              <span className="text-[10.5px] font-bold text-muted-foreground group-hover:text-primary transition flex items-center gap-0.5">
                 <span>استكشاف</span>
                 <MaterialIcon name="chevron_left" size={14} />
               </span>
             </div>
 
-            {/* Visual Mini Progress Bar */}
-            <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${c.tone.bar}`}
-                style={{ width: `${Math.min(100, Math.max(0, c.percent))}%` }}
-              />
-            </div>
+            {/* shadcn Progress Bar */}
+            <Progress
+              value={c.percent}
+              className="mt-2.5 h-1.5 bg-muted"
+              indicatorClassName={c.tone.bar}
+            />
 
-            <p className="mt-2 text-[11px] font-medium text-slate-400 dark:text-slate-500 truncate">
+            <p className="mt-2 text-[11px] font-medium text-muted-foreground truncate">
               {c.hint}
             </p>
-          </div>
+          </Card>
         ))}
       </div>
     </div>

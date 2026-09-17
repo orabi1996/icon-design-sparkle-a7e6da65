@@ -1,6 +1,10 @@
 import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { WidgetProps, EmployeeRecord } from "../types";
 import { num, numMoney } from "../services/analyticsData";
 import { exportToExcel, exportToCsv } from "../export/exportUtils";
@@ -119,23 +123,23 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
   };
 
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900 space-y-4">
+    <Card className="rounded-3xl border-border bg-card p-5 shadow-sm space-y-4 text-card-foreground">
       {/* Header & Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3.5 dark:border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3.5">
         <div className="flex items-center gap-2.5">
           <span className="grid size-9 place-items-center rounded-xl bg-blue-50 text-[#0b57d0] dark:bg-blue-950/60 dark:text-blue-400">
             <MaterialIcon name="table_chart" size={20} filled />
           </span>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              <h3 className="text-sm font-black text-foreground">
                 مستكشف البيانات التحليلي (Data Explorer)
               </h3>
-              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-mono font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <Badge variant="secondary" className="font-mono font-bold text-xs">
                 {num(sortedData.length)} سجل
-              </span>
+              </Badge>
             </div>
-            <p className="text-[11px] font-medium text-slate-400">
+            <p className="text-[11px] font-medium text-muted-foreground">
               جدول تحليلي متقدم متعدد الأبعاد مع دعم البحث والفرز والترقيم وتصدير البيانات
             </p>
           </div>
@@ -147,9 +151,9 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
             <MaterialIcon
               name="search"
               size={17}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             />
-            <input
+            <Input
               type="text"
               placeholder="ابحث في السجلات..."
               value={searchTerm}
@@ -157,31 +161,33 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
                 setSearchTerm(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-9 w-52 rounded-full border border-slate-200 bg-slate-50 pe-9 ps-3.5 text-xs font-bold text-slate-800 placeholder:text-slate-400 focus:border-[#0b57d0] focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+              className="h-9 w-52 rounded-full bg-muted/40 pe-9 ps-3.5 text-xs font-bold"
             />
           </div>
 
           {/* Column Picker Toggle */}
           <div className="relative">
-            <button
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
               onClick={() => setShowColumnPicker(!showColumnPicker)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+              className="gap-1.5 rounded-xl font-bold text-xs"
             >
               <MaterialIcon name="view_column" size={16} />
               <span>الأعمدة</span>
-            </button>
+            </Button>
 
             {showColumnPicker && (
-              <div className="absolute left-0 mt-2 w-56 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl z-20 dark:border-slate-700 dark:bg-slate-800">
-                <p className="text-xs font-black text-slate-900 mb-2 dark:text-white">
+              <div className="absolute left-0 mt-2 w-56 rounded-2xl border border-border bg-popover p-3 shadow-xl z-20 text-popover-foreground">
+                <p className="text-xs font-black text-foreground mb-2">
                   إظهار وإخفاء الأعمدة
                 </p>
                 <div className="space-y-1.5 max-h-56 overflow-y-auto">
                   {DEFAULT_COLUMNS.map((col) => (
                     <label
                       key={col.key}
-                      className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
+                      className="flex items-center gap-2 text-xs font-bold text-foreground cursor-pointer hover:text-primary"
                     >
                       <input
                         type="checkbox"
@@ -198,25 +204,29 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
           </div>
 
           {/* Export Buttons */}
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            className="gap-1.5 rounded-xl font-bold text-xs"
             title="تصدير إلى Excel"
           >
             <MaterialIcon name="file_download" size={16} />
             <span>Excel</span>
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleExportCsv}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-200"
+            className="gap-1.5 rounded-xl font-bold text-xs"
             title="تصدير إلى CSV"
           >
             <MaterialIcon name="description" size={16} />
             <span>CSV</span>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -298,44 +308,48 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
                 )}
                 {visibleKeys.has("status") && (
                   <td className="py-2.5 px-3.5">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                    <Badge
+                      variant={emp.status === "نشط" ? "outline" : emp.status === "موقوف" ? "secondary" : "destructive"}
+                      className={`text-[10.5px] font-bold ${
                         emp.status === "نشط"
-                          ? "bg-emerald-50 text-[#137333] dark:bg-emerald-950/60 dark:text-emerald-400"
+                          ? "bg-emerald-50 text-[#137333] border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-900"
                           : emp.status === "موقوف"
-                          ? "bg-amber-50 text-[#b06000] dark:bg-amber-950/60 dark:text-amber-400"
-                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400"
+                          ? "bg-amber-50 text-[#b06000] border-amber-200 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-900"
+                          : ""
                       }`}
                     >
                       {emp.status || "نشط"}
-                    </span>
+                    </Badge>
                   </td>
                 )}
                 {visibleKeys.has("attendance_status") && (
                   <td className="py-2.5 px-3.5">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-[10.5px] font-bold ${
+                    <Badge
+                      variant="secondary"
+                      className={`text-[10.5px] font-bold ${
                         emp.attendance_status === "حاضر"
                           ? "bg-emerald-50 text-[#137333] dark:bg-emerald-950/60 dark:text-emerald-400"
                           : emp.attendance_status === "متأخر"
                           ? "bg-amber-50 text-[#b06000] dark:bg-amber-950/60 dark:text-amber-400"
-                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                          : "text-muted-foreground"
                       }`}
                     >
                       {emp.attendance_status || "غير مسجل"}
-                    </span>
+                    </Badge>
                   </td>
                 )}
                 {visibleKeys.has("basic_salary") && (
-                  <td className="py-2.5 px-3.5 font-mono text-slate-800 dark:text-slate-200">
+                  <td className="py-2.5 px-3.5 font-mono text-foreground font-bold">
                     {numMoney(emp.basic_salary)}
                   </td>
                 )}
 
                 <td className="py-2.5 px-3.5 text-center">
                   <div className="flex items-center justify-center gap-1.5">
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() =>
                         onDrillDown({
                           title: `سجل الموظف: ${emp.full_name}`,
@@ -345,19 +359,25 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
                           filterDescription: `تفاصيل الموظف ${emp.full_name} (${emp.emp_no})`,
                         })
                       }
-                      className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-blue-50 hover:text-[#0b57d0] dark:hover:bg-blue-950/40"
+                      className="size-7 rounded-lg text-muted-foreground hover:bg-blue-50 hover:text-primary dark:hover:bg-blue-950/40"
                       title="فحص التفاصيل"
                     >
                       <MaterialIcon name="visibility" size={16} />
-                    </button>
-                    <Link
-                      to="/staff/update"
-                      search={{ id: emp.id } as never}
-                      className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
                       title="الملف الوظيفي"
                     >
-                      <MaterialIcon name="edit" size={15} />
-                    </Link>
+                      <Link
+                        to="/staff/update"
+                        search={{ id: emp.id } as never}
+                      >
+                        <MaterialIcon name="edit" size={15} />
+                      </Link>
+                    </Button>
                   </div>
                 </td>
               </tr>
@@ -367,7 +387,7 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
               <tr>
                 <td
                   colSpan={visibleKeys.size + 1}
-                  className="py-12 text-center text-xs text-slate-400"
+                  className="py-12 text-center text-xs text-muted-foreground"
                 >
                   لا توجد سجلات مطابقة للبحث أو الفلاتر المحددة
                 </td>
@@ -379,7 +399,7 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
 
       {/* Pagination Footer */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-bold">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground font-bold">
           <span>عرض</span>
           <select
             value={pageSize}
@@ -387,7 +407,7 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
               setPageSize(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="h-8 rounded-lg border border-slate-200 bg-white px-2 dark:border-slate-800 dark:bg-slate-900"
+            className="h-8 rounded-lg border border-border bg-background px-2 text-foreground"
           >
             <option value={10}>10 أسطر</option>
             <option value={25}>25 سطراً</option>
@@ -397,27 +417,31 @@ export function DataExplorerWidget({ employees, onDrillDown }: WidgetProps) {
         </div>
 
         <div className="flex items-center gap-1.5">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage(currentPage - 1)}
-            className="rounded-lg border border-slate-200 bg-white p-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
+            className="size-8 rounded-lg"
           >
             <MaterialIcon name="chevron_right" size={16} />
-          </button>
-          <span className="text-xs font-bold font-mono text-slate-700 dark:text-slate-300 px-2">
+          </Button>
+          <span className="text-xs font-bold font-mono text-foreground px-2">
             صفحة {currentPage} من {totalPages}
           </span>
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage(currentPage + 1)}
-            className="rounded-lg border border-slate-200 bg-white p-1.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
+            className="size-8 rounded-lg"
           >
             <MaterialIcon name="chevron_left" size={16} />
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

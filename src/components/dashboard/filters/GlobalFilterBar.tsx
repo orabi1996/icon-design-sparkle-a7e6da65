@@ -1,6 +1,17 @@
 import { MaterialIcon } from "@/components/MaterialIcon";
 import type { GlobalFilters, DatePresetKey, EmployeeRecord } from "../types";
 import { getActiveFilterCount, num } from "../services/analyticsData";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface GlobalFilterBarProps {
   filters: GlobalFilters;
@@ -32,43 +43,37 @@ function FilterDropdown({
   icon: string;
 }) {
   const isSelected = value !== "all";
+  const selectedLabel = options.find((o) => o.value === value)?.label || options[0]?.label;
+
   return (
-    <div className="relative inline-flex items-center">
-      <div
-        className={`flex h-9 items-center gap-1.5 rounded-2xl border px-3 text-xs font-bold transition-all shadow-2xs ${
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger
+        className={`h-9 w-auto min-w-[130px] rounded-2xl border px-3 text-xs font-bold transition-all shadow-2xs gap-1.5 focus:ring-1 focus:ring-primary ${
           isSelected
-            ? "border-[#0b57d0] bg-blue-50/90 text-[#0b57d0] dark:border-blue-500 dark:bg-blue-950/50 dark:text-blue-300 ring-1 ring-[#0b57d0]/30"
-            : "border-slate-200/90 bg-slate-50/70 text-slate-700 hover:border-slate-300 hover:bg-white dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-300"
+            ? "border-primary bg-primary/10 text-primary dark:bg-primary/20 ring-1 ring-primary/30 font-black"
+            : "border-border bg-card text-foreground hover:bg-accent/50"
         }`}
       >
         <MaterialIcon
           name={icon}
           size={16}
-          className={isSelected ? "text-[#0b57d0] dark:text-blue-400" : "text-slate-400"}
+          className={isSelected ? "text-primary" : "text-muted-foreground"}
           filled={isSelected}
         />
-        <select
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="cursor-pointer appearance-none bg-transparent pr-1 pl-5 text-xs font-bold text-inherit focus:outline-none"
-        >
-          {options.map((opt) => (
-            <option
-              key={opt.value}
-              value={opt.value}
-              className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white"
-            >
-              {opt.label}
-            </option>
-          ))}
-        </select>
-        <MaterialIcon
-          name="expand_more"
-          size={16}
-          className="pointer-events-none absolute left-2 text-slate-400"
-        />
-      </div>
-    </div>
+        <SelectValue>{selectedLabel}</SelectValue>
+      </SelectTrigger>
+      <SelectContent dir="rtl" className="max-h-64 rounded-2xl shadow-xl">
+        {options.map((opt) => (
+          <SelectItem
+            key={opt.value}
+            value={opt.value}
+            className="text-xs font-bold cursor-pointer rounded-xl"
+          >
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -143,20 +148,23 @@ export function GlobalFilterBar({
   };
 
   return (
-    <section className="rounded-3xl border border-slate-200/80 bg-white p-4 md:p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900/90 space-y-3.5">
+    <Card className="rounded-3xl border-border/80 bg-card p-4 md:p-5 shadow-xs space-y-3.5">
       {/* Top row: Filter selectors */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {/* Section Badge */}
-          <div className="flex items-center gap-2 pe-3 font-black text-xs text-slate-800 dark:text-slate-200 border-e border-slate-200 dark:border-slate-800">
-            <span className="grid size-7 place-items-center rounded-lg bg-blue-50 text-[#0b57d0] dark:bg-blue-950/60 dark:text-blue-400">
+          <div className="flex items-center gap-2 pe-3 font-black text-xs text-foreground border-e border-border">
+            <span className="grid size-7 place-items-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
               <MaterialIcon name="tune" size={17} filled />
             </span>
             <span>الفلاتر الشاملة</span>
             {activeCount > 0 && (
-              <span className="rounded-full bg-[#0b57d0] px-2 py-0.5 text-[10.5px] font-black font-mono text-white">
+              <Badge
+                variant="default"
+                className="px-2 py-0.5 text-[10.5px] font-black font-mono rounded-full"
+              >
                 {num(activeCount)}
-              </span>
+              </Badge>
             )}
           </div>
 
@@ -242,51 +250,55 @@ export function GlobalFilterBar({
 
         {/* Reset button */}
         {activeCount > 0 && (
-          <button
-            type="button"
+          <Button
+            variant="destructive"
+            size="sm"
             onClick={onReset}
-            className="flex items-center gap-1.5 rounded-2xl border border-rose-200 bg-rose-50/90 px-3.5 py-1.5 text-xs font-black text-rose-700 hover:bg-rose-100 dark:border-rose-900/50 dark:bg-rose-950/50 dark:text-rose-300 transition shadow-2xs cursor-pointer"
+            className="h-8 rounded-2xl text-xs font-bold gap-1.5 shadow-2xs cursor-pointer"
           >
             <MaterialIcon name="restart_alt" size={16} />
-            <span>إعادة تعيين ({num(activeCount)})</span>
-          </button>
+            <span>إعادة تعيين</span>
+            <Badge
+              variant="secondary"
+              className="px-1.5 py-0 text-[10px] font-mono font-bold bg-white/20 text-white border-0"
+            >
+              {num(activeCount)}
+            </Badge>
+          </Button>
         )}
       </div>
 
       {/* Bottom row: Date Presets & Custom Date Inputs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border/70">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="flex items-center gap-1.5 text-xs font-black text-slate-600 dark:text-slate-300 pe-1">
-            <MaterialIcon name="calendar_month" size={17} className="text-[#0b57d0]" />
+          <span className="flex items-center gap-1.5 text-xs font-black text-muted-foreground pe-1">
+            <MaterialIcon name="calendar_month" size={17} className="text-primary" />
             <span>فترة المؤشرات:</span>
           </span>
 
-          {/* Segmented Control Pill Track */}
-          <div className="flex flex-wrap items-center gap-1 rounded-2xl bg-slate-100/90 p-1 dark:bg-slate-800/70 border border-slate-200/50 dark:border-slate-700/50">
-            {DATE_PRESETS.map((p) => {
-              const on = filters.datePreset === p.key;
-              return (
-                <button
+          {/* shadcn Tabs for Segmented Control */}
+          <Tabs
+            value={filters.datePreset}
+            onValueChange={(val) => handleDatePresetChange(val as DatePresetKey)}
+          >
+            <TabsList className="h-9 rounded-2xl bg-muted/80 p-1 border border-border/50">
+              {DATE_PRESETS.map((p) => (
+                <TabsTrigger
                   key={p.key}
-                  type="button"
-                  onClick={() => handleDatePresetChange(p.key)}
-                  className={`rounded-xl px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
-                    on
-                      ? "bg-white text-[#0b57d0] shadow-2xs dark:bg-slate-900 dark:text-blue-400 font-black ring-1 ring-black/5"
-                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-                  }`}
+                  value={p.key}
+                  className="rounded-xl px-3 py-1 text-xs font-bold data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-xs font-bold cursor-pointer"
                 >
                   {p.label}
-                </button>
-              );
-            })}
-          </div>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         </div>
 
         {/* Date Range Inputs */}
-        <div className="flex items-center gap-2 rounded-2xl border border-slate-200/90 bg-slate-50/70 px-3 py-1 dark:border-slate-800 dark:bg-slate-800/60 shadow-2xs">
-          <MaterialIcon name="date_range" size={16} className="text-[#0b57d0]" />
-          <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/40 px-3 py-1 shadow-2xs">
+          <MaterialIcon name="date_range" size={16} className="text-primary" />
+          <label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
             <span>من:</span>
             <input
               type="date"
@@ -294,11 +306,11 @@ export function GlobalFilterBar({
               onChange={(e) =>
                 onChange({ ...filters, datePreset: "custom", fromDate: e.target.value })
               }
-              className="bg-transparent font-mono font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
+              className="bg-transparent font-mono font-bold text-xs text-foreground focus:outline-none"
             />
           </label>
-          <span className="text-slate-300 dark:text-slate-600">|</span>
-          <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+          <span className="text-border">|</span>
+          <label className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground">
             <span>إلى:</span>
             <input
               type="date"
@@ -306,11 +318,11 @@ export function GlobalFilterBar({
               onChange={(e) =>
                 onChange({ ...filters, datePreset: "custom", toDate: e.target.value })
               }
-              className="bg-transparent font-mono font-bold text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
+              className="bg-transparent font-mono font-bold text-xs text-foreground focus:outline-none"
             />
           </label>
         </div>
       </div>
-    </section>
+    </Card>
   );
 }

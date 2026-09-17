@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo } from "react";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import type { DashboardLayout, WidgetConfig, WidgetType } from "../types";
 import { WIDGET_REGISTRY } from "../registry";
 
@@ -534,10 +537,10 @@ export function DashboardStudioDrawer({
                     مصمم لوحة المعلومات
                   </h2>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-extrabold text-[#0b57d0] dark:bg-blue-950 dark:text-blue-300 font-mono">
+                    <Badge variant="secondary" className="gap-1 px-2 py-0.5 text-[10px] font-extrabold font-mono text-[#0b57d0] dark:text-blue-300">
                       <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span>{activeCount} عناصر نشطة</span>
-                    </span>
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -870,14 +873,14 @@ export function DashboardStudioDrawer({
                     </div>
 
                     {/* Save Settings Button */}
-                    <button
+                    <Button
                       type="button"
                       onClick={handleSaveSettings}
-                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#0b57d0] py-2 text-xs font-extrabold text-white hover:bg-[#0842a0] transition shadow-xs mt-2 cursor-pointer"
+                      className="w-full gap-1.5 rounded-xl text-xs font-black shadow-xs mt-2"
                     >
                       <MaterialIcon name="save" size={16} />
                       <span>حفظ الإعدادات</span>
-                    </button>
+                    </Button>
 
                     {showSaveFeedback && (
                       <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 animate-in fade-in">
@@ -1046,21 +1049,10 @@ export function DashboardStudioDrawer({
                   </div>
 
                   {/* Toggle Switch */}
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={isDesignMode}
-                    onClick={() => onDesignModeChange(!isDesignMode)}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      isDesignMode ? "bg-[#0b57d0]" : "bg-slate-300 dark:bg-slate-600"
-                    }`}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
-                        isDesignMode ? "-translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </button>
+                  <Switch
+                    checked={isDesignMode}
+                    onCheckedChange={onDesignModeChange}
+                  />
                 </div>
 
                 <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-normal">

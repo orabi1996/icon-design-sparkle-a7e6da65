@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { DashboardLayout } from "../types";
 import { DEFAULT_DASHBOARDS } from "../services/dashboardStorage";
 
@@ -71,15 +73,17 @@ export function DashboardSwitcher({
       </div>
 
       {/* New Dashboard Button */}
-      <button
+      <Button
         type="button"
+        variant="outline"
+        size="sm"
         onClick={() => setModalOpen(true)}
-        className="flex items-center gap-1.5 rounded-2xl border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-extrabold text-[#0b57d0] hover:bg-blue-100 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-300 transition"
+        className="gap-1.5 rounded-2xl border-primary/30 text-primary hover:bg-primary/10 font-bold text-xs"
         title="إنشاء لوحة تنفيذية جديدة"
       >
         <MaterialIcon name="add" size={16} />
         <span>لوحة جديدة</span>
-      </button>
+      </Button>
 
       {/* Modal */}
       {modalOpen && (
@@ -88,61 +92,63 @@ export function DashboardSwitcher({
           aria-modal="true"
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4"
         >
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 text-right animate-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3 dark:border-slate-800">
+          <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl text-card-foreground text-right animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2">
                 <span className="grid size-9 place-items-center rounded-xl bg-blue-50 text-[#0b57d0] dark:bg-blue-950 dark:text-blue-400">
                   <MaterialIcon name="dashboard_customize" size={20} filled />
                 </span>
-                <h3 className="text-sm font-black text-slate-900 dark:text-white">
+                <h3 className="text-sm font-black text-foreground">
                   إنشاء لوحة معلومات جديدة
                 </h3>
               </div>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => setModalOpen(false)}
-                className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
               >
                 <MaterialIcon name="close" size={18} />
-              </button>
+              </Button>
             </div>
 
             <form onSubmit={handleCreate} className="mt-4 space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-foreground mb-1">
                   اسم اللوحة
                 </label>
-                <input
+                <Input
                   type="text"
                   placeholder="مثال: لوحة تقارير الإدارة الإقليمية"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   required
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-[#0b57d0] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="h-10 w-full rounded-xl text-xs font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-foreground mb-1">
                   الوصف (اختياري)
                 </label>
-                <input
+                <Input
                   type="text"
                   placeholder="متابعة مؤشرات الفرع أو القسم..."
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-[#0b57d0] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="h-10 w-full rounded-xl text-xs font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-xs font-bold text-foreground mb-1">
                   بدء بالنسخ من قالب:
                 </label>
                 <select
                   value={templateId}
                   onChange={(e) => setTemplateId(e.target.value)}
-                  className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                  className="h-10 w-full rounded-xl border border-input bg-background px-3 text-xs font-bold text-foreground"
                 >
                   {dashboards.map((d) => (
                     <option key={d.id} value={d.id}>
@@ -152,20 +158,23 @@ export function DashboardSwitcher({
                 </select>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
-                <button
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-xl px-4 py-2 text-xs font-extrabold text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+                  className="rounded-xl text-xs font-bold text-muted-foreground"
                 >
                   إلغاء
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="rounded-xl bg-[#0b57d0] px-5 py-2 text-xs font-extrabold text-white hover:bg-[#0842a0] transition"
+                  size="sm"
+                  className="rounded-xl px-5 text-xs font-bold"
                 >
                   إنشاء وحفظ
-                </button>
+                </Button>
               </div>
             </form>
           </div>

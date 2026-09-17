@@ -9,6 +9,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { AppShell } from "@/components/hr/AppShell";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useRows } from "@/lib/hr-db";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -376,35 +378,37 @@ function PeopleInsightStudioPage() {
                 </p>
               </div>
             </div>
-            <button
+            <Button
               type="button"
+              variant="destructive"
+              size="sm"
               onClick={handleRefresh}
-              className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 cursor-pointer"
+              className="rounded-xl font-bold"
             >
               إعادة المحاولة
-            </button>
+            </Button>
           </div>
         )}
 
         {/* Empty State */}
         {!isInitialLoading && !hasError && filteredEmployees.length === 0 && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-12 text-center shadow-xs dark:border-slate-800 dark:bg-slate-900 space-y-3">
-            <span className="grid size-12 place-items-center rounded-2xl bg-slate-100 text-slate-400 mx-auto dark:bg-slate-800">
+          <div className="rounded-3xl border border-border bg-card p-12 text-center shadow-xs text-card-foreground space-y-3">
+            <span className="grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground mx-auto">
               <MaterialIcon name="filter_list_off" size={28} />
             </span>
-            <h3 className="text-sm font-black text-slate-800 dark:text-white">
+            <h3 className="text-sm font-black text-foreground">
               لا توجد بيانات مطابقة للفلاتر المحددة
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto">
               جرب تغيير خيارات الفلترة أو إعادة تعيين الفلاتر الشاملة لعرض جميع موظفي المنشأة.
             </p>
-            <button
+            <Button
               type="button"
               onClick={handleResetFilters}
-              className="rounded-xl bg-[#0b57d0] px-4 py-2 text-xs font-bold text-white hover:bg-[#0842a0] cursor-pointer"
+              className="rounded-xl font-bold"
             >
               إعادة تعيين الفلاتر
-            </button>
+            </Button>
           </div>
         )}
 
@@ -451,9 +455,9 @@ function PeopleInsightStudioPage() {
                           <span className="font-black text-slate-800 dark:text-slate-100">
                             {widget.title}
                           </span>
-                          <span className="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-[#0b57d0] dark:bg-blue-950 dark:text-blue-300 font-mono">
+                          <Badge variant="secondary" className="px-1.5 py-0.5 text-[10px] font-bold font-mono">
                             {widget.colSpan} أعمدة
-                          </span>
+                          </Badge>
                         </div>
 
                         <div className="flex items-center gap-1">

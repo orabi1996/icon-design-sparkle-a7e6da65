@@ -1,4 +1,5 @@
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { Card } from "@/components/ui/card";
 import type { WidgetProps } from "../types";
 import { computeJobCategoryBreakdown, num, numPercent } from "../services/analyticsData";
 
@@ -14,18 +15,18 @@ export function JobCategoryWidget({ employees, onDrillDown }: WidgetProps) {
   const categories = computeJobCategoryBreakdown(employees);
 
   return (
-    <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900 flex flex-col justify-between h-full">
+    <Card className="rounded-3xl border-border bg-card p-5 shadow-sm flex flex-col justify-between h-full text-card-foreground">
       <div>
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 dark:border-slate-800">
+        <div className="flex items-center justify-between border-b border-border pb-3.5">
           <div className="flex items-center gap-2.5">
             <span className="grid size-9 place-items-center rounded-xl bg-cyan-50 text-[#00639b] dark:bg-cyan-950/60 dark:text-cyan-400">
               <MaterialIcon name="category" size={20} filled />
             </span>
             <div>
-              <h3 className="text-sm font-black text-slate-900 dark:text-white">
+              <h3 className="text-sm font-black text-foreground">
                 توزيع الفئات الوظيفية
               </h3>
-              <p className="text-[11px] font-medium text-slate-400">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 تصنيف القوى العاملة حسب طبيعة العمل والتأهيل المهني
               </p>
             </div>
@@ -33,7 +34,7 @@ export function JobCategoryWidget({ employees, onDrillDown }: WidgetProps) {
         </div>
 
         {/* Stacked Visual Bar */}
-        <div className="mt-4 flex h-3.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <div className="mt-4 flex h-3.5 w-full overflow-hidden rounded-full bg-muted">
           {categories.map((c) => (
             <div
               key={c.category}
@@ -60,22 +61,22 @@ export function JobCategoryWidget({ employees, onDrillDown }: WidgetProps) {
                     filterDescription: `الموظفون المنتمون للفئة الوظيفية ${c.category}`,
                   })
                 }
-                className="group cursor-pointer rounded-xl p-2 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition flex items-center justify-between"
+                className="group cursor-pointer rounded-xl p-2 hover:bg-muted/50 transition flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
                   <span
                     className={`size-2.5 rounded-full ${CATEGORY_COLORS[c.category]?.split(" ")[0] || "bg-slate-400"}`}
                   />
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-[#0b57d0] transition">
+                  <span className="text-xs font-bold text-foreground group-hover:text-primary transition">
                     {c.category}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2 font-mono text-xs">
-                  <span className="font-black text-slate-900 dark:text-white">
+                  <span className="font-black text-foreground">
                     {num(c.count)}
                   </span>
-                  <span className="text-slate-400 text-[11px]">
+                  <span className="text-muted-foreground text-[11px]">
                     ({numPercent(c.percent)})
                   </span>
                 </div>
@@ -84,6 +85,6 @@ export function JobCategoryWidget({ employees, onDrillDown }: WidgetProps) {
           })}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
