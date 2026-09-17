@@ -93,11 +93,6 @@ function AuthenticatedShell({ children }: { children: ReactNode }) {
             </span>
           </Link>
 
-          <button type="button" onClick={() => setDirectoryOpen(true)} className="mx-auto hidden w-full max-w-lg items-center gap-2.5 rounded-full bg-white/12 px-4 py-2 text-right ring-1 ring-white/20 hover:bg-white/20 lg:flex" aria-label="فتح دليل الشاشات">
-            <MaterialIcon name="search" size={20} className="text-topbar-muted" />
-            <span className="flex-1 text-xs text-topbar-muted">ابحث عن شاشة في النظام...</span>
-            <kbd className="rounded-full bg-white/15 px-2 py-0.5 text-[10px]">Ctrl+K</kbd>
-          </button>
 
           {/* Top Actions & Profile */}
           <div className="ms-auto flex items-center gap-1.5">
@@ -147,15 +142,6 @@ function AuthenticatedShell({ children }: { children: ReactNode }) {
         </footer>
       </main>
 
-      {/* Google Material 3 Floating Action Button (FAB) */}
-      <button
-        className="fixed bottom-6 end-6 z-30 grid size-14 place-items-center rounded-2xl bg-[#0b57d0] text-white shadow-[0_4px_16px_0_rgba(11,87,208,0.35)] transition-transform hover:scale-105 active:scale-95"
-        aria-label="دليل جميع الشاشات"
-        title="دليل جميع الشاشات"
-        onClick={() => setDirectoryOpen(true)}
-      >
-        <MaterialIcon name="apps" size={24} filled />
-      </button>
       <ScreenDirectory open={directoryOpen} onOpenChange={setDirectoryOpen} />
     </div>
     </CompanyWorkspaceProvider>
