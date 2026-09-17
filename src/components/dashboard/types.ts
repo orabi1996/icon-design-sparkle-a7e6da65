@@ -67,6 +67,8 @@ export interface DashboardLayout {
   isDefault?: boolean;
   icon?: string;
   widgets: WidgetConfig[];
+  refreshInterval?: number; // seconds, 0 = manual
+  scope?: "all" | "executives" | "managers" | "private";
   createdAt: string;
   updatedAt: string;
 }

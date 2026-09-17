@@ -81,6 +81,7 @@ function PeopleInsightStudioPage() {
   // Theme & Edit Mode
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("light");
   const [isStudioOpen, setIsStudioOpen] = useState(false);
+  const [isDesignMode, setIsDesignMode] = useState(false);
 
   // Apply dark mode class to document
   useEffect(() => {
@@ -232,6 +233,49 @@ function PeopleInsightStudioPage() {
     saveDashboards(updated);
   };
 
+  // Auto-refresh timer based on dashboard refreshInterval setting
+  useEffect(() => {
+    const intervalSec = activeDashboard.refreshInterval || 0;
+    if (intervalSec <= 0) {
+      return;
+    }
+    const timer = setInterval(() => {
+      handleRefresh();
+    }, intervalSec * 1000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [activeDashboard.refreshInterval]);
+
+  // Move widget in design mode
+  const handleMoveWidget = (id: string, delta: number) => {
+    const idx = activeDashboard.widgets.findIndex((w) => w.id === id);
+    if (idx === -1) return;
+    const targetIdx = idx + delta;
+    if (targetIdx < 0 || targetIdx >= activeDashboard.widgets.length) return;
+    const items = [...activeDashboard.widgets];
+    const temp = items[targetIdx]!;
+    items[targetIdx] = items[idx]!;
+    items[idx] = temp;
+    handleUpdateActiveDashboard({ ...activeDashboard, widgets: items });
+  };
+
+  // Change widget colSpan in design mode
+  const handleChangeWidgetColSpan = (id: string, colSpan: number) => {
+    const items = activeDashboard.widgets.map((w) =>
+      w.id === id ? { ...w, colSpan } : w
+    );
+    handleUpdateActiveDashboard({ ...activeDashboard, widgets: items });
+  };
+
+  // Hide widget from design mode
+  const handleHideWidget = (id: string) => {
+    const items = activeDashboard.widgets.map((w) =>
+      w.id === id ? { ...w, hidden: true } : w
+    );
+    handleUpdateActiveDashboard({ ...activeDashboard, widgets: items });
+  };
+
   // Reset to default dashboards
   const handleResetDashboards = () => {
     if (confirm("هل ترغب في استعادة اللوحات الافتراضية؟ سيتم حذف التخصيصات.")) {
@@ -285,7 +329,12 @@ function PeopleInsightStudioPage() {
 
   return (
     <AppShell>
-      <div className="space-y-6 pb-12 transition-colors duration-200" dir="rtl">
+      <div
+        className={`space-y-6 pb-12 transition-all duration-300 pl-16 ${
+          isStudioOpen ? "lg:pl-[384px]" : "lg:pl-16"
+        }`}
+        dir="rtl"
+      >
         {/* Executive Header Banner */}
         <header className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -303,6 +352,12 @@ function PeopleInsightStudioPage() {
                     <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-black text-[#0b57d0] dark:bg-blue-950 dark:text-blue-300">
                       لوحة الموارد البشرية التنفيذية
                     </span>
+                    {isDesignMode && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-black text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                        <MaterialIcon name="tune" size={13} />
+                        <span>وضع التصميم مفعل</span>
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                     متابعة لحظية للقوى العاملة والحضور وسير العمل والمؤشرات الرئيسية.
@@ -330,7 +385,7 @@ function PeopleInsightStudioPage() {
               </div>
             </div>
 
-            {/* Actions & Switcher */}
+            {/* Clean Minimal Executive Actions */}
             <div className="flex flex-wrap items-center gap-2.5">
               <DashboardSwitcher
                 dashboards={dashboards}
@@ -342,17 +397,18 @@ function PeopleInsightStudioPage() {
 
               <button
                 type="button"
-                onClick={() => setIsStudioOpen(true)}
-                className="flex items-center gap-1.5 rounded-2xl bg-[#0b57d0] px-4 py-2 text-xs font-black text-white hover:bg-[#0842a0] transition shadow-xs"
+                onClick={() => setIsStudioOpen(!isStudioOpen)}
+                className="flex items-center gap-1.5 rounded-2xl bg-[#0b57d0] px-3.5 py-2 text-xs font-black text-white hover:bg-[#0842a0] transition shadow-xs cursor-pointer"
+                title={isStudioOpen ? "إغلاق مصمم اللوحة" : "فتح مصمم اللوحة"}
               >
-                <MaterialIcon name="tune" size={17} />
-                <span>تخصيص اللوحة</span>
+                <MaterialIcon name="space_dashboard" size={16} />
+                <span>{isStudioOpen ? "إغلاق المصمم" : "مصمم اللوحة"}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleExportDashboard}
-                className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
                 title="تصدير بيانات اللوحة إلى Excel"
               >
                 <MaterialIcon name="download" size={16} />
@@ -363,7 +419,7 @@ function PeopleInsightStudioPage() {
                 type="button"
                 onClick={handleRefresh}
                 disabled={employeesQuery.isFetching}
-                className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
                 title="تحديث البيانات"
               >
                 <MaterialIcon
@@ -419,7 +475,7 @@ function PeopleInsightStudioPage() {
             <button
               type="button"
               onClick={handleRefresh}
-              className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700"
+              className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700 cursor-pointer"
             >
               إعادة المحاولة
             </button>
@@ -441,7 +497,7 @@ function PeopleInsightStudioPage() {
             <button
               type="button"
               onClick={handleResetFilters}
-              className="rounded-xl bg-[#0b57d0] px-4 py-2 text-xs font-bold text-white hover:bg-[#0842a0]"
+              className="rounded-xl bg-[#0b57d0] px-4 py-2 text-xs font-bold text-white hover:bg-[#0842a0] cursor-pointer"
             >
               إعادة تعيين الفلاتر
             </button>
@@ -471,7 +527,82 @@ function PeopleInsightStudioPage() {
                     : "col-span-12";
 
                 return (
-                  <div key={widget.id} className={colClass}>
+                  <div
+                    key={widget.id}
+                    className={`${colClass} ${
+                      isDesignMode
+                        ? "relative rounded-3xl border-2 border-dashed border-blue-400/80 bg-blue-50/15 p-2 dark:border-blue-500/60 dark:bg-blue-950/20 transition-all shadow-xs"
+                        : "transition-all"
+                    }`}
+                  >
+                    {/* Design Mode Interactive Control Bar */}
+                    {isDesignMode && (
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-blue-200 bg-white/95 px-3 py-1.5 text-xs shadow-xs dark:border-blue-900/60 dark:bg-slate-900/95">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-400">
+                            <MaterialIcon name="drag_indicator" size={16} />
+                          </span>
+                          <span className="font-black text-slate-800 dark:text-slate-100">
+                            {widget.title}
+                          </span>
+                          <span className="rounded-md bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-[#0b57d0] dark:bg-blue-950 dark:text-blue-300 font-mono">
+                            {widget.colSpan} أعمدة
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                          {/* Quick Column Width Resizing */}
+                          <span className="text-[10px] text-slate-400 ms-1 font-bold">العرض:</span>
+                          {[3, 4, 6, 8, 12].map((span) => (
+                            <button
+                              key={span}
+                              type="button"
+                              onClick={() => handleChangeWidgetColSpan(widget.id, span)}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition cursor-pointer ${
+                                widget.colSpan === span
+                                  ? "bg-[#0b57d0] text-white"
+                                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                              }`}
+                              title={`تغيير العرض إلى ${span} أعمدة`}
+                            >
+                              {span}
+                            </button>
+                          ))}
+
+                          <div className="h-3.5 w-px bg-slate-200 dark:bg-slate-700 mx-1" />
+
+                          {/* Move Left / Right */}
+                          <button
+                            type="button"
+                            onClick={() => handleMoveWidget(widget.id, -1)}
+                            className="grid size-6 place-items-center rounded hover:bg-slate-100 text-slate-500 dark:hover:bg-slate-800 cursor-pointer"
+                            title="تحريك للخلف"
+                          >
+                            <MaterialIcon name="chevron_right" size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleMoveWidget(widget.id, 1)}
+                            className="grid size-6 place-items-center rounded hover:bg-slate-100 text-slate-500 dark:hover:bg-slate-800 cursor-pointer"
+                            title="تحريك للأمام"
+                          >
+                            <MaterialIcon name="chevron_left" size={16} />
+                          </button>
+
+                          {/* Hide Widget */}
+                          <button
+                            type="button"
+                            onClick={() => handleHideWidget(widget.id)}
+                            className="grid size-6 place-items-center rounded hover:bg-rose-50 text-rose-500 dark:hover:bg-rose-950/50 cursor-pointer ms-1"
+                            title="إخفاء من اللوحة"
+                          >
+                            <MaterialIcon name="visibility_off" size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actual Widget Component */}
                     {reg.component({
                       widget,
                       filters,
@@ -482,7 +613,7 @@ function PeopleInsightStudioPage() {
                       requests: rawRequests,
                       loans: rawLoans,
                       payrollRuns: rawPayrollRuns,
-                      isEditing: isStudioOpen,
+                      isEditing: isDesignMode,
                       onDrillDown: (d) => setDrillDownData({ ...d, isOpen: true }),
                     })}
                   </div>
@@ -497,14 +628,16 @@ function PeopleInsightStudioPage() {
           onClose={() => setDrillDownData((prev) => ({ ...prev, isOpen: false }))}
         />
 
-        {/* Dashboard Studio Drawer */}
+        {/* Dashboard Studio Designer (Left Vertical Navigation Rail + Side Drawer) */}
         <DashboardStudioDrawer
           isOpen={isStudioOpen}
-          onClose={() => setIsStudioOpen(false)}
+          onOpenChange={setIsStudioOpen}
           dashboard={activeDashboard}
           onUpdateDashboard={handleUpdateActiveDashboard}
           themeMode={themeMode}
           onThemeModeChange={setThemeMode}
+          isDesignMode={isDesignMode}
+          onDesignModeChange={setIsDesignMode}
         />
       </div>
     </AppShell>

@@ -1,56 +1,238 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import type { DashboardLayout, WidgetConfig, WidgetType } from "../types";
 import { WIDGET_REGISTRY } from "../registry";
 
-interface DashboardStudioDrawerProps {
+export interface DashboardStudioDrawerProps {
   isOpen: boolean;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   dashboard: DashboardLayout;
   onUpdateDashboard: (updated: DashboardLayout) => void;
   themeMode: "light" | "dark" | "system";
   onThemeModeChange: (mode: "light" | "dark" | "system") => void;
+  isDesignMode: boolean;
+  onDesignModeChange: (mode: boolean) => void;
 }
 
-type StudioTab = "elements" | "layers" | "settings" | "appearance";
+export type StudioTab = "elements" | "layers" | "settings" | "appearance";
+
+interface ElementMeta {
+  type: WidgetType;
+  title: string;
+  icon: string;
+  category: string;
+  description: string;
+  defaultColSpan: number;
+}
+
+const ALL_ELEMENTS: ElementMeta[] = [
+  {
+    type: "employee_status",
+    title: "حالات الموظفين والمسيرات",
+    icon: "badge",
+    category: "القوى العاملة",
+    description: "مؤشرات تفصيلية للموظفين النشطين والمجازين والموقوفين",
+    defaultColSpan: 12,
+  },
+  {
+    type: "live_attendance",
+    title: "شريط الحضور اللحظي لليوم",
+    icon: "fingerprint",
+    category: "الحضور والانصراف",
+    description: "متابعة فورية للحضور، الغياب، التأخير، والانصراف المبكر",
+    defaultColSpan: 12,
+  },
+  {
+    type: "job_levels",
+    title: "توزيع المستويات الوظيفية",
+    icon: "leaderboard",
+    category: "الهيكل والوظائف",
+    description: "تحليل الكوادر حسب المستويات القيادية والإشرافية والتنفيذية",
+    defaultColSpan: 6,
+  },
+  {
+    type: "job_categories",
+    title: "توزيع الفئات الوظيفية",
+    icon: "category",
+    category: "الهيكل والوظائف",
+    description: "تصنيف الموظفين حسب الفئات (إداري، تقني، تشغيلي، عمالة)",
+    defaultColSpan: 6,
+  },
+  {
+    type: "nationalities",
+    title: "توزيع الجنسيات والتوطين",
+    icon: "public",
+    category: "التحليلات والمؤشرات",
+    description: "إحصائية جنسيات الموظفين مع رسم Donut لمعدل السعودة",
+    defaultColSpan: 6,
+  },
+  {
+    type: "sectors",
+    title: "قطاعات الوظائف الحالية",
+    icon: "lan",
+    category: "الهيكل والوظائف",
+    description: "توزيع القوى العاملة على القطاعات التنظيمية الكبرى",
+    defaultColSpan: 6,
+  },
+  {
+    type: "department_distribution",
+    title: "أكبر الأقسام من حيث العدد",
+    icon: "domain",
+    category: "الهيكل والوظائف",
+    description: "قائمة ترتيب الأقسام تنازلياً مع أشرطة التقدم والنسب",
+    defaultColSpan: 6,
+  },
+  {
+    type: "pending_requests",
+    title: "مركز الطلبات المعلقة",
+    icon: "pending_actions",
+    category: "العمليات والموافقات",
+    description: "متابعة طلبات الإجازات والسلف وتنبيهات التأخير",
+    defaultColSpan: 6,
+  },
+  {
+    type: "payroll_summary",
+    title: "ملخص الأجور ومسيرات الرواتب",
+    icon: "payments",
+    category: "المالية والأجور",
+    description: "إجمالي الرواتب، صافي المستحق، والاستقطاعات الشهرية",
+    defaultColSpan: 12,
+  },
+  {
+    type: "data_explorer",
+    title: "مستكشف البيانات التحليلي",
+    icon: "manage_search",
+    category: "التقارير المتقدمة",
+    description: "جدول تفاعلي مع فرز وفلترة وتصدير فوري للبيانات",
+    defaultColSpan: 12,
+  },
+];
 
 export function DashboardStudioDrawer({
   isOpen,
-  onClose,
+  onOpenChange,
   dashboard,
   onUpdateDashboard,
   themeMode,
   onThemeModeChange,
+  isDesignMode,
+  onDesignModeChange,
 }: DashboardStudioDrawerProps) {
-  const [activeTab, setActiveTab] = useState<StudioTab>("layers");
+  const [activeTab, setActiveTab] = useState<StudioTab>("elements");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(
     dashboard.widgets[0]?.id ?? null
   );
 
-  if (!isOpen) return null;
+  // Drag-and-drop state for layers tab
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
-  const selectedWidget = dashboard.widgets.find((w) => w.id === selectedWidgetId);
+  // Settings form local state
+  const [dashboardName, setDashboardName] = useState(dashboard.name);
+  const [refreshInterval, setRefreshInterval] = useState<number>(dashboard.refreshInterval || 0);
+  const [scope, setScope] = useState<"all" | "executives" | "managers" | "private">(
+    dashboard.scope || "all"
+  );
+  const [showSaveFeedback, setShowSaveFeedback] = useState(false);
 
-  // Add widget
-  const handleAddWidget = (type: WidgetType) => {
-    const reg = WIDGET_REGISTRY[type];
-    const newWidget: WidgetConfig = {
-      id: `w-${type}-${Date.now()}`,
-      type,
-      title: reg.title,
-      colSpan: reg.defaultColSpan,
-      settings: {},
-    };
-    onUpdateDashboard({
-      ...dashboard,
-      widgets: [...dashboard.widgets, newWidget],
-    });
-    setSelectedWidgetId(newWidget.id);
-    setActiveTab("settings");
+  // Selected widget object
+  const selectedWidget = useMemo(
+    () => dashboard.widgets.find((w) => w.id === selectedWidgetId),
+    [dashboard.widgets, selectedWidgetId]
+  );
+
+  // Active widgets count (non-hidden)
+  const activeCount = useMemo(
+    () => dashboard.widgets.filter((w) => !w.hidden).length,
+    [dashboard.widgets]
+  );
+
+  // Filtered elements in library
+  const filteredElements = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return ALL_ELEMENTS;
+    return ALL_ELEMENTS.filter(
+      (el) =>
+        el.title.toLowerCase().includes(q) ||
+        el.category.toLowerCase().includes(q) ||
+        el.description.toLowerCase().includes(q)
+    );
+  }, [searchQuery]);
+
+  // Check if an element type is currently enabled and visible
+  const isElementActive = (type: WidgetType) => {
+    const existing = dashboard.widgets.find((w) => w.type === type);
+    return existing ? !existing.hidden : false;
   };
 
-  // Remove widget
+  // Toggle element on/off directly from 2-column grid
+  const handleToggleElement = (element: ElementMeta) => {
+    const existingIndex = dashboard.widgets.findIndex((w) => w.type === element.type);
+
+    if (existingIndex !== -1) {
+      const updatedWidgets = [...dashboard.widgets];
+      const target = updatedWidgets[existingIndex]!;
+      updatedWidgets[existingIndex] = {
+        ...target,
+        hidden: !target.hidden,
+      };
+      onUpdateDashboard({
+        ...dashboard,
+        widgets: updatedWidgets,
+      });
+      if (target.hidden) {
+        setSelectedWidgetId(target.id);
+      }
+    } else {
+      const reg = WIDGET_REGISTRY[element.type];
+      const newWidget: WidgetConfig = {
+        id: `w-${element.type}-${Date.now()}`,
+        type: element.type,
+        title: element.title || reg?.title || "عنصر جديد",
+        colSpan: element.defaultColSpan || reg?.defaultColSpan || 6,
+        hidden: false,
+        settings: {},
+      };
+      onUpdateDashboard({
+        ...dashboard,
+        widgets: [...dashboard.widgets, newWidget],
+      });
+      setSelectedWidgetId(newWidget.id);
+    }
+  };
+
+  // Move layer up
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const items = [...dashboard.widgets];
+    const temp = items[index - 1]!;
+    items[index - 1] = items[index]!;
+    items[index] = temp;
+    onUpdateDashboard({ ...dashboard, widgets: items });
+  };
+
+  // Move layer down
+  const handleMoveDown = (index: number) => {
+    if (index === dashboard.widgets.length - 1) return;
+    const items = [...dashboard.widgets];
+    const temp = items[index + 1]!;
+    items[index + 1] = items[index]!;
+    items[index] = temp;
+    onUpdateDashboard({ ...dashboard, widgets: items });
+  };
+
+  // Toggle hide on layer
+  const handleToggleHide = (id: string) => {
+    onUpdateDashboard({
+      ...dashboard,
+      widgets: dashboard.widgets.map((w) =>
+        w.id === id ? { ...w, hidden: !w.hidden } : w
+      ),
+    });
+  };
+
+  // Remove widget from layer
   const handleRemoveWidget = (id: string) => {
     onUpdateDashboard({
       ...dashboard,
@@ -61,37 +243,7 @@ export function DashboardStudioDrawer({
     }
   };
 
-  // Toggle hide/show
-  const handleToggleHide = (id: string) => {
-    onUpdateDashboard({
-      ...dashboard,
-      widgets: dashboard.widgets.map((w) =>
-        w.id === id ? { ...w, hidden: !w.hidden } : w
-      ),
-    });
-  };
-
-  // Move up
-  const handleMoveUp = (index: number) => {
-    if (index === 0) return;
-    const items = [...dashboard.widgets];
-    const temp = items[index - 1]!;
-    items[index - 1] = items[index]!;
-    items[index] = temp;
-    onUpdateDashboard({ ...dashboard, widgets: items });
-  };
-
-  // Move down
-  const handleMoveDown = (index: number) => {
-    if (index === dashboard.widgets.length - 1) return;
-    const items = [...dashboard.widgets];
-    const temp = items[index + 1]!;
-    items[index + 1] = items[index]!;
-    items[index] = temp;
-    onUpdateDashboard({ ...dashboard, widgets: items });
-  };
-
-  // Change colSpan
+  // Change colSpan of widget
   const handleChangeColSpan = (id: string, colSpan: number) => {
     onUpdateDashboard({
       ...dashboard,
@@ -101,7 +253,7 @@ export function DashboardStudioDrawer({
     });
   };
 
-  // Update settings of selected widget
+  // Update selected widget settings
   const handleUpdateSelectedSettings = (patch: Partial<WidgetConfig["settings"]>) => {
     if (!selectedWidgetId) return;
     onUpdateDashboard({
@@ -117,7 +269,7 @@ export function DashboardStudioDrawer({
     });
   };
 
-  // Update title of selected widget
+  // Update selected widget title
   const handleUpdateSelectedTitle = (title: string) => {
     if (!selectedWidgetId) return;
     onUpdateDashboard({
@@ -128,357 +280,709 @@ export function DashboardStudioDrawer({
     });
   };
 
-  const tabs: { key: StudioTab; label: string; icon: string }[] = [
-    { key: "layers", label: "الطبقات", icon: "layers" },
-    { key: "elements", label: "العناصر", icon: "add_box" },
-    { key: "settings", label: "الإعدادات", icon: "tune" },
-    { key: "appearance", label: "المظهر", icon: "palette" },
-  ];
+  // Drag and drop handlers for layers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+    const items = [...dashboard.widgets];
+    const draggedItem = items[draggedIndex]!;
+    items.splice(draggedIndex, 1);
+    items.splice(index, 0, draggedItem);
+    setDraggedIndex(index);
+    onUpdateDashboard({ ...dashboard, widgets: items });
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  // Save general settings
+  const handleSaveSettings = () => {
+    onUpdateDashboard({
+      ...dashboard,
+      name: dashboardName.trim() || dashboard.name,
+      refreshInterval,
+      scope,
+      updatedAt: new Date().toISOString(),
+    });
+    setShowSaveFeedback(true);
+    setTimeout(() => setShowSaveFeedback(false), 2500);
+  };
+
+  // Handle Tab click from Navigation Rail
+  const handleRailTabClick = (tab: StudioTab) => {
+    if (!isOpen) {
+      setActiveTab(tab);
+      onOpenChange(true);
+    } else if (activeTab === tab) {
+      onOpenChange(false);
+    } else {
+      setActiveTab(tab);
+    }
+  };
 
   return (
-    <aside
-      role="region"
-      aria-label="استوديو تخصيص اللوحة"
-      className="fixed inset-y-0 start-0 z-50 flex w-full max-w-md flex-col bg-white shadow-2xl dark:bg-slate-900 border-e border-slate-200 dark:border-slate-800 animate-in slide-in-from-right duration-200"
-    >
-      {/* Studio Header */}
-      <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90">
-        <div className="flex items-center gap-2.5">
-          <span className="grid size-9 place-items-center rounded-xl bg-[#0b57d0] text-white">
-            <MaterialIcon name="dashboard_customize" size={20} filled />
-          </span>
-          <div>
-            <h3 className="text-sm font-black text-slate-900 dark:text-white">
-              استوديو تخصيص اللوحة
-            </h3>
-            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              {dashboard.name}
-            </p>
-          </div>
-        </div>
+    <>
+      {/* 1. Backdrop on Mobile / Tablet */}
+      {isOpen && (
+        <div
+          onClick={() => onOpenChange(false)}
+          className="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-xs lg:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800"
+      {/* 2. Side Panel Container (Fixed on the far left) */}
+      <div
+        className="fixed left-0 top-0 bottom-0 z-40 flex pointer-events-auto"
+        dir="rtl"
+      >
+        {/* ========================================================= */}
+        {/* Navigation Rail رأسي ضيق بلون Navy / Dark Blue (#0f172a)  */}
+        {/* ========================================================= */}
+        <nav
+          aria-label="شريط أدوات مصمم اللوحة"
+          className="w-16 bg-[#0f172a] text-slate-400 flex flex-col items-center py-4 border-r border-slate-800 shrink-0 z-20 select-none shadow-2xl"
         >
-          <MaterialIcon name="close" size={18} />
-        </button>
-      </div>
+          {/* Top: Studio Main Button */}
+          <button
+            type="button"
+            onClick={() => onOpenChange(!isOpen)}
+            title={isOpen ? "إغلاق مصمم اللوحة" : "فتح مصمم اللوحة (Studio)"}
+            className={`group relative grid size-11 place-items-center rounded-2xl transition-all duration-200 mb-6 cursor-pointer ${
+              isOpen
+                ? "bg-[#0b57d0] text-white shadow-[0_0_15px_rgba(11,87,208,0.5)] ring-2 ring-blue-400"
+                : "bg-slate-800/80 text-blue-400 hover:bg-[#0b57d0] hover:text-white"
+            }`}
+          >
+            <MaterialIcon name="space_dashboard" size={22} filled />
+            {/* Tooltip */}
+            <span className="absolute right-full mr-2 rounded-md bg-slate-900 px-2 py-1 text-[11px] font-bold text-white whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none shadow-md z-50">
+              {isOpen ? "إغلاق الاستوديو" : "مصمم اللوحة (Studio)"}
+            </span>
+          </button>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
-        {tabs.map((t) => {
-          const on = activeTab === t.key;
-          return (
+          {/* Navigation Items (Elements, Layers, Settings) */}
+          <div className="flex flex-col items-center gap-4 w-full px-1">
+            {/* Tab: العناصر (Elements) */}
             <button
-              key={t.key}
               type="button"
-              onClick={() => setActiveTab(t.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold border-b-2 transition ${
-                on
-                  ? "border-[#0b57d0] text-[#0b57d0] bg-white dark:bg-slate-800 dark:text-blue-400"
-                  : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300"
+              onClick={() => handleRailTabClick("elements")}
+              title="العناصر والمكتبة"
+              className={`group relative flex flex-col items-center justify-center w-full py-2.5 rounded-xl transition-all cursor-pointer ${
+                isOpen && activeTab === "elements"
+                  ? "bg-blue-600/20 text-white font-bold"
+                  : "hover:bg-slate-800/60 hover:text-slate-200 text-slate-400"
               }`}
             >
-              <MaterialIcon name={t.icon} size={16} filled={on} />
-              <span>{t.label}</span>
+              {/* Active Indicator Bar on Left Edge */}
+              {isOpen && activeTab === "elements" && (
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#0b57d0] rounded-l-full" />
+              )}
+              <MaterialIcon
+                name="widgets"
+                size={22}
+                filled={isOpen && activeTab === "elements"}
+                className={isOpen && activeTab === "elements" ? "text-blue-400" : ""}
+              />
+              <span className="text-[10px] tracking-tight mt-1 font-medium">العناصر</span>
+              {/* Active count indicator dot */}
+              <span className="absolute top-1 left-2 size-2 rounded-full bg-emerald-500 ring-2 ring-[#0f172a]" />
             </button>
-          );
-        })}
-      </div>
 
-      {/* Tab Body */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {/* Tab 1: Layers (الطبقات) */}
-        {activeTab === "layers" && (
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
-              ترتيب العناصر وحجم العرض (12 عموداً):
-            </p>
-            <div className="space-y-2">
-              {dashboard.widgets.map((w, index) => {
-                const reg = WIDGET_REGISTRY[w.type];
-                const isSelected = selectedWidgetId === w.id;
-                return (
-                  <div
-                    key={w.id}
-                    className={`rounded-2xl border p-3 transition ${
-                      isSelected
-                        ? "border-[#0b57d0] bg-blue-50/50 dark:border-blue-500 dark:bg-blue-950/30"
-                        : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-                    } ${w.hidden ? "opacity-50" : ""}`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div
-                        className="flex items-center gap-2 cursor-pointer flex-1"
-                        onClick={() => {
-                          setSelectedWidgetId(w.id);
-                          setActiveTab("settings");
-                        }}
-                      >
-                        <MaterialIcon
-                          name={reg?.icon || "widgets"}
-                          size={18}
-                          className="text-[#0b57d0]"
-                        />
-                        <div>
-                          <p className="text-xs font-black text-slate-900 dark:text-white">
-                            {w.title}
-                          </p>
-                          <p className="text-[10px] text-slate-400 font-mono">
-                            {w.colSpan === 12
-                              ? "عرض كامل (12)"
-                              : w.colSpan === 6
-                              ? "نصف الشاشة (6)"
-                              : `عرض (${w.colSpan})`}
-                          </p>
-                        </div>
-                      </div>
+            {/* Tab: الطبقات (Layers) */}
+            <button
+              type="button"
+              onClick={() => handleRailTabClick("layers")}
+              title="ترتيب وإدارة الطبقات"
+              className={`group relative flex flex-col items-center justify-center w-full py-2.5 rounded-xl transition-all cursor-pointer ${
+                isOpen && activeTab === "layers"
+                  ? "bg-blue-600/20 text-white font-bold"
+                  : "hover:bg-slate-800/60 hover:text-slate-200 text-slate-400"
+              }`}
+            >
+              {isOpen && activeTab === "layers" && (
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#0b57d0] rounded-l-full" />
+              )}
+              <MaterialIcon
+                name="layers"
+                size={22}
+                filled={isOpen && activeTab === "layers"}
+                className={isOpen && activeTab === "layers" ? "text-blue-400" : ""}
+              />
+              <span className="text-[10px] tracking-tight mt-1 font-medium">الطبقات</span>
+            </button>
 
-                      <div className="flex items-center gap-1">
-                        {/* Size selector */}
-                        <select
-                          value={w.colSpan}
-                          onChange={(e) => handleChangeColSpan(w.id, Number(e.target.value))}
-                          className="h-7 rounded-lg border border-slate-200 bg-white px-1.5 text-[11px] font-bold dark:border-slate-700 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-                        >
-                          <option value={12}>12</option>
-                          <option value={6}>6</option>
-                          <option value={4}>4</option>
-                        </select>
-
-                        {/* Move Up */}
-                        <button
-                          type="button"
-                          disabled={index === 0}
-                          onClick={() => handleMoveUp(index)}
-                          className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
-                          title="تحريك لأعلى"
-                        >
-                          <MaterialIcon name="arrow_upward" size={14} />
-                        </button>
-
-                        {/* Move Down */}
-                        <button
-                          type="button"
-                          disabled={index === dashboard.widgets.length - 1}
-                          onClick={() => handleMoveDown(index)}
-                          className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-30 dark:hover:bg-slate-800"
-                          title="تحريك لأسفل"
-                        >
-                          <MaterialIcon name="arrow_downward" size={14} />
-                        </button>
-
-                        {/* Hide / Show */}
-                        <button
-                          type="button"
-                          onClick={() => handleToggleHide(w.id)}
-                          className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                          title={w.hidden ? "إظهار" : "إخفاء"}
-                        >
-                          <MaterialIcon
-                            name={w.hidden ? "visibility_off" : "visibility"}
-                            size={14}
-                          />
-                        </button>
-
-                        {/* Remove */}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveWidget(w.id)}
-                          className="grid size-7 place-items-center rounded-lg text-rose-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50"
-                          title="حذف الودجت"
-                        >
-                          <MaterialIcon name="delete" size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {/* Tab: الإعدادات (Settings) */}
+            <button
+              type="button"
+              onClick={() => handleRailTabClick("settings")}
+              title="إعدادات اللوحة والعناصر"
+              className={`group relative flex flex-col items-center justify-center w-full py-2.5 rounded-xl transition-all cursor-pointer ${
+                isOpen && activeTab === "settings"
+                  ? "bg-blue-600/20 text-white font-bold"
+                  : "hover:bg-slate-800/60 hover:text-slate-200 text-slate-400"
+              }`}
+            >
+              {isOpen && activeTab === "settings" && (
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#0b57d0] rounded-l-full" />
+              )}
+              <MaterialIcon
+                name="tune"
+                size={22}
+                filled={isOpen && activeTab === "settings"}
+                className={isOpen && activeTab === "settings" ? "text-blue-400" : ""}
+              />
+              <span className="text-[10px] tracking-tight mt-1 font-medium">الإعدادات</span>
+            </button>
           </div>
-        )}
 
-        {/* Tab 2: Elements / Widget Library (العناصر) */}
-        {activeTab === "elements" && (
-          <div className="space-y-3">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
-              اختر عنصراً من المكتبة لإضافته إلى اللوحة:
-            </p>
-            <div className="space-y-2.5">
-              {(Object.keys(WIDGET_REGISTRY) as WidgetType[]).map((type) => {
-                const reg = WIDGET_REGISTRY[type];
-                const alreadyAdded = dashboard.widgets.some((w) => w.type === type);
-                return (
-                  <div
-                    key={type}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xs hover:border-[#0b57d0] dark:border-slate-800 dark:bg-slate-900 transition"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="grid size-9 place-items-center rounded-xl bg-blue-50 text-[#0b57d0] dark:bg-blue-950 dark:text-blue-400">
-                        <MaterialIcon name={reg.icon} size={20} filled />
-                      </span>
-                      <div>
-                        <p className="text-xs font-black text-slate-900 dark:text-white">
-                          {reg.title}
-                        </p>
-                        <p className="text-[10.5px] text-slate-400 max-w-[200px] truncate">
-                          {reg.description}
-                        </p>
-                      </div>
+          {/* Bottom Item: Tab: المظهر (Appearance) */}
+          <div className="mt-auto flex flex-col items-center gap-3 w-full px-1 pt-4 border-t border-slate-800/80">
+            <button
+              type="button"
+              onClick={() => handleRailTabClick("appearance")}
+              title="تخصيص المظهر والثيم"
+              className={`group relative flex flex-col items-center justify-center w-full py-2.5 rounded-xl transition-all cursor-pointer ${
+                isOpen && activeTab === "appearance"
+                  ? "bg-blue-600/20 text-white font-bold"
+                  : "hover:bg-slate-800/60 hover:text-slate-200 text-slate-400"
+              }`}
+            >
+              {isOpen && activeTab === "appearance" && (
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-7 bg-[#0b57d0] rounded-l-full" />
+              )}
+              <MaterialIcon
+                name="palette"
+                size={22}
+                filled={isOpen && activeTab === "appearance"}
+                className={isOpen && activeTab === "appearance" ? "text-blue-400" : ""}
+              />
+              <span className="text-[10px] tracking-tight mt-1 font-medium">المظهر</span>
+            </button>
+          </div>
+        </nav>
+
+        {/* ========================================================= */}
+        {/* Side Drawer مباشرة بجانب الـ Navigation Rail (280px-340px) */}
+        {/* ========================================================= */}
+        {isOpen && (
+          <aside
+            role="dialog"
+            aria-label="لوحة مصمم المعلومات"
+            className="w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col shrink-0 animate-in slide-in-from-left duration-200 z-10 overflow-hidden"
+          >
+            {/* Header: Title + Active Count Badge + Close Button */}
+            <div className="flex items-center justify-between border-b border-slate-100 p-4 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-xl bg-blue-50 text-[#0b57d0] dark:bg-blue-950 dark:text-blue-300">
+                  <MaterialIcon name="dashboard_customize" size={19} filled />
+                </span>
+                <div>
+                  <h2 className="text-sm font-black text-slate-900 dark:text-white leading-tight">
+                    مصمم لوحة المعلومات
+                  </h2>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-extrabold text-[#0b57d0] dark:bg-blue-950 dark:text-blue-300 font-mono">
+                      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>{activeCount} عناصر نشطة</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="grid size-7 place-items-center rounded-lg text-slate-400 hover:bg-slate-200/70 hover:text-slate-700 dark:hover:bg-slate-800 transition cursor-pointer"
+                title="إغلاق الدرج الجانبي"
+              >
+                <MaterialIcon name="close" size={18} />
+              </button>
+            </div>
+
+            {/* Scrollable Drawer Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* ==================================================== */}
+              {/* TAB 1: العناصر (Elements / Widget Library)            */}
+              {/* ==================================================== */}
+              {activeTab === "elements" && (
+                <div className="space-y-3.5">
+                  {/* Search Box */}
+                  <div className="relative">
+                    <MaterialIcon
+                      name="search"
+                      size={18}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="ابحث في العناصر..."
+                      className="w-full h-9 rounded-xl border border-slate-200 bg-slate-50 pe-9 ps-8 text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-[#0b57d0] focus:outline-none dark:border-slate-800 dark:bg-slate-800/80 dark:text-white"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      >
+                        <MaterialIcon name="cancel" size={16} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Section Title */}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300">
+                      العناصر المتاحة ({filteredElements.length})
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      انقر لتفعيل / تعطيل العنصر
+                    </span>
+                  </div>
+
+                  {/* 2-Column Grid of Widget Cards */}
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {filteredElements.map((el) => {
+                      const active = isElementActive(el.type);
+                      return (
+                        <button
+                          key={el.type}
+                          type="button"
+                          onClick={() => handleToggleElement(el)}
+                          className={`relative flex flex-col items-start p-3 rounded-2xl border text-right transition-all duration-150 cursor-pointer select-none ${
+                            active
+                              ? "border-[#0b57d0] bg-blue-50/70 dark:border-blue-500 dark:bg-blue-950/40 shadow-xs ring-1 ring-[#0b57d0]/30"
+                              : "border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 text-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          {/* Active Checkmark Pill in Corner */}
+                          <div className="w-full flex items-center justify-between mb-2">
+                            <span
+                              className={`grid size-8 place-items-center rounded-xl transition ${
+                                active
+                                  ? "bg-[#0b57d0] text-white"
+                                  : "bg-white text-slate-400 border border-slate-200 dark:border-slate-700 dark:bg-slate-800"
+                              }`}
+                            >
+                              <MaterialIcon name={el.icon} size={18} filled={active} />
+                            </span>
+
+                            {active ? (
+                              <span className="flex items-center justify-center size-5 rounded-full bg-[#0b57d0] text-white shadow-xs">
+                                <MaterialIcon name="check" size={13} />
+                              </span>
+                            ) : (
+                              <span className="flex items-center justify-center size-5 rounded-full border border-slate-300 dark:border-slate-700 text-slate-400">
+                                <MaterialIcon name="add" size={12} />
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Widget Title */}
+                          <h4 className="text-xs font-black text-slate-900 dark:text-white leading-tight line-clamp-2">
+                            {el.title}
+                          </h4>
+
+                          {/* Category Tag */}
+                          <span className="text-[10px] font-medium text-slate-400 mt-1 line-clamp-1">
+                            {el.category}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {filteredElements.length === 0 && (
+                    <div className="py-8 text-center text-xs text-slate-400 space-y-2">
+                      <MaterialIcon name="search_off" size={24} className="mx-auto text-slate-300" />
+                      <p>لا توجد عناصر مطابقة لبحثك</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ==================================================== */}
+              {/* TAB 2: الطبقات (Layers / Reorder & Visibility)        */}
+              {/* ==================================================== */}
+              {activeTab === "layers" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300">
+                      ترتيب العناصر داخل اللوحة ({dashboard.widgets.length})
+                    </span>
+                    <span className="text-[10px] text-slate-400">اسحب للترتيب</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {dashboard.widgets.map((w, index) => {
+                      const reg = WIDGET_REGISTRY[w.type];
+                      const isSelected = selectedWidgetId === w.id;
+                      return (
+                        <div
+                          key={w.id}
+                          draggable
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragEnd={handleDragEnd}
+                          className={`flex items-center justify-between p-2.5 rounded-2xl border transition-all ${
+                            isSelected
+                              ? "border-[#0b57d0] bg-blue-50/60 dark:border-blue-500 dark:bg-blue-950/30"
+                              : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+                          } ${w.hidden ? "opacity-50" : ""} ${
+                            draggedIndex === index ? "opacity-30 border-dashed border-blue-400" : ""
+                          }`}
+                        >
+                          {/* Drag Handle & Info */}
+                          <div
+                            className="flex items-center gap-2 cursor-pointer flex-1 min-w-0"
+                            onClick={() => {
+                              setSelectedWidgetId(w.id);
+                              setActiveTab("settings");
+                            }}
+                          >
+                            <span className="cursor-grab text-slate-400 hover:text-slate-600">
+                              <MaterialIcon name="drag_indicator" size={16} />
+                            </span>
+                            <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-blue-50 text-[#0b57d0] dark:bg-blue-950">
+                              <MaterialIcon name={reg?.icon || "widgets"} size={16} />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                {w.title}
+                              </p>
+                              <p className="text-[10px] text-slate-400 font-mono">
+                                {w.colSpan === 12
+                                  ? "عرض كامل (12)"
+                                  : w.colSpan === 6
+                                  ? "نصف الشاشة (6)"
+                                  : `عرض (${w.colSpan})`}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Actions: Size + Move Up/Down + Hide/Show + Remove */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {/* Move Up */}
+                            <button
+                              type="button"
+                              disabled={index === 0}
+                              onClick={() => handleMoveUp(index)}
+                              className="grid size-6 place-items-center rounded text-slate-400 hover:bg-slate-100 disabled:opacity-20 dark:hover:bg-slate-800 cursor-pointer"
+                              title="تحريك لأعلى"
+                            >
+                              <MaterialIcon name="arrow_upward" size={14} />
+                            </button>
+
+                            {/* Move Down */}
+                            <button
+                              type="button"
+                              disabled={index === dashboard.widgets.length - 1}
+                              onClick={() => handleMoveDown(index)}
+                              className="grid size-6 place-items-center rounded text-slate-400 hover:bg-slate-100 disabled:opacity-20 dark:hover:bg-slate-800 cursor-pointer"
+                              title="تحريك لأسفل"
+                            >
+                              <MaterialIcon name="arrow_downward" size={14} />
+                            </button>
+
+                            {/* Hide / Show */}
+                            <button
+                              type="button"
+                              onClick={() => handleToggleHide(w.id)}
+                              className="grid size-6 place-items-center rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                              title={w.hidden ? "إظهار العنصر" : "إخفاء العنصر"}
+                            >
+                              <MaterialIcon
+                                name={w.hidden ? "visibility_off" : "visibility"}
+                                size={14}
+                              />
+                            </button>
+
+                            {/* Remove */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveWidget(w.id)}
+                              className="grid size-6 place-items-center rounded text-rose-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/50 cursor-pointer"
+                              title="حذف من اللوحة"
+                            >
+                              <MaterialIcon name="delete" size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ==================================================== */}
+              {/* TAB 3: الإعدادات (Settings)                           */}
+              {/* ==================================================== */}
+              {activeTab === "settings" && (
+                <div className="space-y-4">
+                  {/* General Dashboard Settings */}
+                  <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50/70 p-3.5 dark:border-slate-800 dark:bg-slate-800/40">
+                    <span className="text-[11px] font-extrabold text-[#0b57d0] dark:text-blue-400 block">
+                      إعدادات لوحة المعلومات
+                    </span>
+
+                    {/* Dashboard Name */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        اسم لوحة المعلومات
+                      </label>
+                      <input
+                        type="text"
+                        value={dashboardName}
+                        onChange={(e) => setDashboardName(e.target.value)}
+                        className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-[#0b57d0] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                      />
                     </div>
 
+                    {/* Auto Refresh Interval */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        معدل التحديث التلقائي
+                      </label>
+                      <select
+                        value={refreshInterval}
+                        onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                        className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+                      >
+                        <option value={0}>تحديث يدوي فقط</option>
+                        <option value={30}>كل 30 ثانية</option>
+                        <option value={60}>كل 1 دقيقة</option>
+                        <option value={300}>كل 5 دقائق</option>
+                      </select>
+                    </div>
+
+                    {/* Permissions & Visibility Scope */}
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                        نطاق الظهور والصلاحيات
+                      </label>
+                      <select
+                        value={scope}
+                        onChange={(e) => setScope(e.target.value as any)}
+                        className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+                      >
+                        <option value="all">متاح للجميع (عام)</option>
+                        <option value="executives">الإدارة العليا والتنفيذية</option>
+                        <option value="managers">مدراء الأقسام والمشرفين</option>
+                        <option value="private">خاص بي فقط</option>
+                      </select>
+                    </div>
+
+                    {/* Save Settings Button */}
                     <button
                       type="button"
-                      onClick={() => handleAddWidget(type)}
-                      className="flex items-center gap-1 rounded-xl bg-[#0b57d0] px-3 py-1.5 text-xs font-extrabold text-white hover:bg-[#0842a0] transition"
+                      onClick={handleSaveSettings}
+                      className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#0b57d0] py-2 text-xs font-extrabold text-white hover:bg-[#0842a0] transition shadow-xs mt-2 cursor-pointer"
                     >
-                      <MaterialIcon name="add" size={15} />
-                      <span>{alreadyAdded ? "إضافة نسخة" : "إضافة"}</span>
+                      <MaterialIcon name="save" size={16} />
+                      <span>حفظ الإعدادات</span>
                     </button>
+
+                    {showSaveFeedback && (
+                      <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 animate-in fade-in">
+                        <MaterialIcon name="check_circle" size={14} />
+                        <span>تم حفظ إعدادات اللوحة بنجاح!</span>
+                      </div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
-        {/* Tab 3: Widget Settings (الإعدادات) */}
-        {activeTab === "settings" && (
-          <div className="space-y-4">
-            {selectedWidget ? (
-              <>
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-800/50">
-                  <p className="text-xs font-bold text-slate-500">العنصر المحدد للتعديل:</p>
-                  <p className="text-sm font-black text-slate-900 dark:text-white mt-0.5">
-                    {selectedWidget.title}
-                  </p>
+                  {/* Selected Widget Specific Settings */}
+                  {selectedWidget && (
+                    <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-3.5 dark:border-slate-800 dark:bg-slate-900">
+                      <span className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300 block">
+                        تخصيص: {selectedWidget.title}
+                      </span>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          عنوان العنصر باللوحة
+                        </label>
+                        <input
+                          type="text"
+                          value={selectedWidget.title}
+                          onChange={(e) => handleUpdateSelectedTitle(e.target.value)}
+                          className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-[#0b57d0] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                          عرض العنصر في الشبكة (أعمدة)
+                        </label>
+                        <select
+                          value={selectedWidget.colSpan}
+                          onChange={(e) =>
+                            handleChangeColSpan(selectedWidget.id, Number(e.target.value))
+                          }
+                          className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+                        >
+                          <option value={12}>عرض كامل (12 عموداً)</option>
+                          <option value={8}>ثلثا الشاشة (8 أعمدة)</option>
+                          <option value={6}>نصف الشاشة (6 أعمدة)</option>
+                          <option value={4}>ثلث الشاشة (4 أعمدة)</option>
+                          <option value={3}>ربع الشاشة (3 أعمدة)</option>
+                        </select>
+                      </div>
+
+                      {/* Specialized settings */}
+                      {selectedWidget.type === "nationalities" && (
+                        <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200 pt-1">
+                          <input
+                            type="checkbox"
+                            checked={selectedWidget.settings?.saudizationEnabled !== false}
+                            onChange={(e) =>
+                              handleUpdateSelectedSettings({
+                                saudizationEnabled: e.target.checked,
+                              })
+                            }
+                            className="rounded accent-[#0b57d0]"
+                          />
+                          <span>تفعيل مؤشر السعودة والتوطين (Donut Chart)</span>
+                        </label>
+                      )}
+
+                      {selectedWidget.type === "department_distribution" && (
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                            الحد الأقصى للأقسام المعروضة
+                          </label>
+                          <input
+                            type="number"
+                            min={3}
+                            max={20}
+                            value={selectedWidget.settings?.limit || 5}
+                            onChange={(e) =>
+                              handleUpdateSelectedSettings({ limit: Number(e.target.value) })
+                            }
+                            className="h-9 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    عنوان العنصر (Title)
-                  </label>
-                  <input
-                    type="text"
-                    value={selectedWidget.title}
-                    onChange={(e) => handleUpdateSelectedTitle(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 focus:border-[#0b57d0] focus:outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    عرض العنصر بالشبكة (Grid Width)
-                  </label>
-                  <select
-                    value={selectedWidget.colSpan}
-                    onChange={(e) =>
-                      handleChangeColSpan(selectedWidget.id, Number(e.target.value))
-                    }
-                    className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                  >
-                    <option value={12}>عرض كامل (12 عموداً)</option>
-                    <option value={6}>نصف الشاشة (6 أعمدة)</option>
-                    <option value={4}>ثلث الشاشة (4 أعمدة)</option>
-                  </select>
-                </div>
-
-                {selectedWidget.type === "nationalities" && (
-                  <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-800 dark:text-slate-200">
-                      <input
-                        type="checkbox"
-                        checked={selectedWidget.settings?.saudizationEnabled !== false}
-                        onChange={(e) =>
-                          handleUpdateSelectedSettings({ saudizationEnabled: e.target.checked })
-                        }
-                        className="rounded accent-[#0b57d0]"
-                      />
-                      <span>تفعيل مؤشر السعودة والتوطين (Donut Chart)</span>
-                    </label>
-                  </div>
-                )}
-
-                {selectedWidget.type === "department_distribution" && (
+              {/* ==================================================== */}
+              {/* TAB 4: المظهر (Appearance / Theme)                    */}
+              {/* ==================================================== */}
+              {activeTab === "appearance" && (
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      الحد الأقصى للأقسام المعروضة
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
+                      نمط المظهر العام
                     </label>
-                    <input
-                      type="number"
-                      min={3}
-                      max={20}
-                      value={selectedWidget.settings?.limit || 5}
-                      onChange={(e) =>
-                        handleUpdateSelectedSettings({ limit: Number(e.target.value) })
-                      }
-                      className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
-                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { key: "light", label: "فاتح", icon: "light_mode" },
+                        { key: "dark", label: "داكن", icon: "dark_mode" },
+                        { key: "system", label: "النظام", icon: "settings_brightness" },
+                      ].map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => onThemeModeChange(item.key as any)}
+                          className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl border p-3 text-xs font-bold transition cursor-pointer ${
+                            themeMode === item.key
+                              ? "border-[#0b57d0] bg-blue-50 text-[#0b57d0] dark:border-blue-500 dark:bg-blue-950 dark:text-blue-300 ring-1 ring-[#0b57d0]"
+                              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
+                          }`}
+                        >
+                          <MaterialIcon
+                            name={item.icon}
+                            size={20}
+                            filled={themeMode === item.key}
+                          />
+                          <span>{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                )}
-              </>
-            ) : (
-              <p className="py-12 text-center text-xs text-slate-400">
-                يرجى اختيار عنصر من تبويب الطبقات لتعديل إعداداته
-              </p>
-            )}
-          </div>
-        )}
 
-        {/* Tab 4: Appearance / Theme (المظهر) */}
-        {activeTab === "appearance" && (
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-                وضع العرض (Theme Mode)
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { key: "light", label: "فاتح", icon: "light_mode" },
-                  { key: "dark", label: "داكن", icon: "dark_mode" },
-                  { key: "system", label: "تلقائي", icon: "settings_brightness" },
-                ].map((item) => (
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                    <p className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300">
+                      هوية Google Material Design 3
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      <span className="size-4 rounded-full bg-[#0b57d0]" />
+                      <span className="font-bold">Google Blue Executive Palette</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ========================================================= */}
+            {/* بطاقة وضع التصميم والتحريك (Design & Movement Mode) أسفل الـ Drawer */}
+            {/* ========================================================= */}
+            <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-900/90 shrink-0">
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 p-3 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`grid size-7 place-items-center rounded-lg transition ${
+                        isDesignMode
+                          ? "bg-[#0b57d0] text-white"
+                          : "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-300"
+                      }`}
+                    >
+                      <MaterialIcon name="tune" size={16} filled={isDesignMode} />
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white leading-tight">
+                        وضع التصميم والتحريك
+                      </h4>
+                      <span
+                        className={`text-[10px] font-extrabold ${
+                          isDesignMode
+                            ? "text-[#0b57d0] dark:text-blue-400"
+                            : "text-slate-400"
+                        }`}
+                      >
+                        {isDesignMode ? "مفعل (وضع التحرير المباشر)" : "مغلق (وضع العرض)"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Toggle Switch */}
                   <button
-                    key={item.key}
                     type="button"
-                    onClick={() => onThemeModeChange(item.key as any)}
-                    className={`flex flex-col items-center justify-center gap-1.5 rounded-2xl border p-3.5 text-xs font-bold transition ${
-                      themeMode === item.key
-                        ? "border-[#0b57d0] bg-blue-50 text-[#0b57d0] dark:border-blue-500 dark:bg-blue-950 dark:text-blue-300"
-                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300"
+                    role="switch"
+                    aria-checked={isDesignMode}
+                    onClick={() => onDesignModeChange(!isDesignMode)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      isDesignMode ? "bg-[#0b57d0]" : "bg-slate-300 dark:bg-slate-600"
                     }`}
                   >
-                    <MaterialIcon name={item.icon} size={20} filled={themeMode === item.key} />
-                    <span>{item.label}</span>
+                    <span
+                      className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        isDesignMode ? "-translate-x-5" : "translate-x-0"
+                      }`}
+                    />
                   </button>
-                ))}
-              </div>
-            </div>
+                </div>
 
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-xs font-bold text-slate-500 mb-2">هوية Google Material Design 3:</p>
-              <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-                <span className="size-4 rounded-full bg-[#0b57d0]" />
-                <span className="font-bold">Google Blue Executive Palette</span>
+                <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-normal">
+                  {isDesignMode
+                    ? "مسموح بتحريك العناصر وتغيير أحجامها وظهور أدوات التحكم المباشرة باللوحة."
+                    : "اللوحة مقفلة تماماً ضد التحريك أو تعديل المقاسات بالخطأ."}
+                </p>
               </div>
             </div>
-          </div>
+          </aside>
         )}
       </div>
-
-      {/* Studio Footer */}
-      <div className="border-t border-slate-200 p-4 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-end">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-xl bg-[#0b57d0] px-5 py-2 text-xs font-extrabold text-white hover:bg-[#0842a0] transition"
-        >
-          تم التخصيص وإغلاق الاستوديو
-        </button>
-      </div>
-    </aside>
+    </>
   );
 }

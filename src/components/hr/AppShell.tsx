@@ -149,7 +149,7 @@ function AuthenticatedShell({ children }: { children: ReactNode }) {
 
       {/* Google Material 3 Floating Action Button (FAB) */}
       <button
-        className="fixed bottom-6 left-6 grid size-14 place-items-center rounded-2xl bg-[#0b57d0] text-white shadow-[0_4px_16px_0_rgba(11,87,208,0.35)] transition-transform hover:scale-105 active:scale-95"
+        className="fixed bottom-6 end-6 z-30 grid size-14 place-items-center rounded-2xl bg-[#0b57d0] text-white shadow-[0_4px_16px_0_rgba(11,87,208,0.35)] transition-transform hover:scale-105 active:scale-95"
         aria-label="دليل جميع الشاشات"
         title="دليل جميع الشاشات"
         onClick={() => setDirectoryOpen(true)}
