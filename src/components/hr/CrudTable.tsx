@@ -3,6 +3,25 @@ import type { ReactNode } from "react";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { Btn, Chip } from "@/components/hr/ui";
 import {
+  Table as ShadcnTable,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Input as ShadcnInput } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
+import {
   useDeleteRow,
   useRows,
   useSaveRow,
@@ -98,24 +117,25 @@ export function CrudTable({
   return (
     <>
       <div
-        className="mt-4 overflow-hidden rounded-2xl border border-border bg-card"
-        style={{ boxShadow: "var(--shadow-card)" }}
+        className="mt-4 overflow-hidden rounded-2xl border border-border bg-card shadow-xs"
       >
-        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
-          <h2 className="me-auto flex items-center gap-2 text-sm font-bold">
-            <MaterialIcon name="table_rows" size={19} className="text-primary" filled />
+        <div className="flex flex-wrap items-center gap-2 border-b border-border bg-muted/20 px-5 py-3.5">
+          <h2 className="me-auto flex items-center gap-2 text-sm font-bold text-foreground">
+            <span className="grid size-7 place-items-center rounded-xl bg-primary/10 text-primary">
+              <MaterialIcon name="table_rows" size={17} filled />
+            </span>
             {title}
-            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-bold text-muted-foreground">
+            <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-mono font-bold text-muted-foreground border border-border">
               {rows.length}
             </span>
           </h2>
           {toolbarExtra}
           <div className="relative">
-            <input
+            <ShadcnInput
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="ابحث..."
-              className={`${control} h-9 w-48 pe-9`}
+              className="h-9 w-48 pe-9 rounded-xl text-xs bg-background border-input"
             />
             <MaterialIcon
               name="search"
@@ -129,26 +149,26 @@ export function CrudTable({
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-max border-collapse text-right">
-            <thead>
-              <tr className="bg-secondary">
+          <ShadcnTable className="w-full min-w-max border-collapse text-right text-[12px]">
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border">
                 {tableFields.map((f) => (
-                  <th
+                  <TableHead
                     key={f.key}
-                    className="whitespace-nowrap border-b border-border px-4 py-3 text-[12px] font-extrabold text-secondary-foreground"
+                    className="whitespace-nowrap px-4 py-3 font-extrabold text-foreground text-right"
                   >
                     {f.label}
-                  </th>
+                  </TableHead>
                 ))}
-                <th className="border-b border-border px-4 py-3 text-[12px] font-extrabold text-secondary-foreground">
+                <TableHead className="whitespace-nowrap px-4 py-3 font-extrabold text-foreground text-center w-24">
                   إجراءات
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {(isLoading || error || filtered.length === 0) && (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={tableFields.length + 1}
                     className="px-4 py-14 text-center text-sm font-semibold text-muted-foreground"
                   >
@@ -157,18 +177,18 @@ export function CrudTable({
                       : error
                         ? "تعذر تحميل البيانات"
                         : "لا توجد بيانات"}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
               {filtered.map((r) => (
-                <tr
+                <TableRow
                   key={String(r["id"])}
-                  className="border-b border-border transition-colors last:border-0 odd:bg-secondary/35 hover:bg-accent/50"
+                  className="border-b border-border/60 transition-colors last:border-0 hover:bg-muted/40"
                 >
                   {tableFields.map((f) => (
-                    <td
+                    <TableCell
                       key={f.key}
-                      className="whitespace-nowrap px-4 py-3 text-[13px] font-semibold"
+                      className="whitespace-nowrap px-4 py-3 text-[13px] font-medium text-foreground"
                     >
                       {f.render ? (
                         f.render(r)
@@ -177,7 +197,7 @@ export function CrudTable({
                           <MaterialIcon
                             name="check_circle"
                             size={18}
-                            className="text-teal"
+                            className="text-emerald-600 dark:text-emerald-400"
                             filled
                           />
                         ) : (
@@ -186,102 +206,114 @@ export function CrudTable({
                       ) : f.key === "status" ? (
                         <Chip label={String(r[f.key] ?? "")} tone={statusTone(String(r[f.key]))} />
                       ) : f.type === "number" ? (
-                        new Intl.NumberFormat("ar-SA").format(Number(r[f.key] ?? 0))
+                        <span className="font-mono">{new Intl.NumberFormat("en-US").format(Number(r[f.key] ?? 0))}</span>
                       ) : (
                         String(r[f.key] ?? "—")
                       )}
-                    </td>
+                    </TableCell>
                   ))}
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <span className="flex items-center gap-1">
+                  <TableCell className="whitespace-nowrap px-4 py-3 text-center">
+                    <span className="flex items-center justify-center gap-1">
                       <button
                         title="تعديل"
+                        type="button"
                         onClick={() => setDraft({ ...r })}
-                        className="grid size-8 place-items-center rounded-lg bg-secondary text-primary transition-colors hover:bg-accent"
+                        className="grid size-8 place-items-center rounded-lg bg-secondary text-primary transition-colors hover:bg-primary/15 cursor-pointer"
                       >
-                        <MaterialIcon name="edit" size={17} />
+                        <MaterialIcon name="edit" size={16} />
                       </button>
                       <button
                         title="حذف"
+                        type="button"
                         onClick={() => {
                           if (confirm("هل تريد حذف هذا السجل نهائياً؟"))
                             del.mutate(String(r["id"]));
                         }}
-                        className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                        className="grid size-8 place-items-center rounded-lg bg-secondary text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive cursor-pointer"
                       >
-                        <MaterialIcon name="delete" size={17} />
+                        <MaterialIcon name="delete" size={16} />
                       </button>
                     </span>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
+            </TableBody>
+          </ShadcnTable>
         </div>
       </div>
 
-      {draft && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-topbar/50 p-4">
-          <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card">
-            <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-              <MaterialIcon
-                name={draft["id"] ? "edit" : "add_circle"}
-                size={20}
-                className="text-primary"
-                filled
-              />
-              <h3 className="text-sm font-extrabold">{draft["id"] ? "تعديل سجل" : addLabel}</h3>
-              <button
-                onClick={() => setDraft(null)}
-                className="ms-auto text-muted-foreground hover:text-foreground"
-              >
-                <MaterialIcon name="close" size={20} />
-              </button>
-            </div>
-            <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
+      <Dialog open={Boolean(draft)} onOpenChange={(open) => !open && setDraft(null)}>
+        <DialogContent className="max-w-3xl rounded-2xl p-6 bg-card border-border shadow-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2.5 text-base font-black text-foreground">
+              <span className="grid size-8 place-items-center rounded-xl bg-primary/10 text-primary">
+                <MaterialIcon
+                  name={draft?.["id"] ? "edit" : "add_circle"}
+                  size={18}
+                  filled
+                />
+              </span>
+              <span>{draft?.["id"] ? "تعديل سجل" : addLabel}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {draft && (
+            <div className="grid gap-4 py-4 sm:grid-cols-2 xl:grid-cols-3">
               {formFields.map((f) => (
                 <label
                   key={f.key}
-                  className={f.type === "textarea" ? "sm:col-span-2 xl:col-span-3" : "block"}
+                  className={f.type === "textarea" ? "sm:col-span-2 xl:col-span-3 space-y-1.5" : "block space-y-1.5"}
                 >
-                  <span className="mb-1.5 flex items-center gap-1 text-[12px] font-bold text-foreground/80">
+                  <span className="flex items-center gap-1 text-[12px] font-bold text-foreground">
                     {f.label}
-                    {f.required && <span className="text-destructive">*</span>}
+                    {f.required && <span className="text-destructive font-black">*</span>}
                   </span>
                   {f.type === "select" ? (
-                    <select
-                      className={control}
-                      value={String(draft[f.key] ?? "")}
-                      onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
-                    >
-                      <option value="">اختر ....</option>
-                      {(f.options ?? []).map((o) => (
-                        <option key={o} value={o}>
-                          {o}
-                        </option>
-                      ))}
-                    </select>
-                  ) : f.type === "checkbox" ? (
-                    <span className="flex h-10 items-center gap-2 rounded-xl border border-input bg-background px-3">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-[var(--primary)]"
-                        checked={Boolean(draft[f.key])}
-                        onChange={(e) => setDraft({ ...draft, [f.key]: e.target.checked })}
+                    <div className="relative">
+                      <select
+                        className="h-10 w-full rounded-xl border border-input bg-background pe-9 ps-3.5 text-[13px] font-medium text-foreground outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer"
+                        value={String(draft[f.key] ?? "")}
+                        onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
+                      >
+                        <option value="">اختر ....</option>
+                        {(f.options ?? []).map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
+                      <MaterialIcon
+                        name="arrow_drop_down"
+                        size={20}
+                        className="pointer-events-none absolute inset-y-0 left-2.5 my-auto h-fit text-muted-foreground"
                       />
-                      <span className="text-[12px] font-semibold text-muted-foreground">مفعّل</span>
+                    </div>
+                  ) : f.type === "checkbox" ? (
+                    <span className="flex h-10 items-center gap-2 rounded-xl border border-input bg-background px-3 cursor-pointer">
+                      <Checkbox
+                        id={`chk-${f.key}`}
+                        className="size-4"
+                        checked={Boolean(draft[f.key])}
+                        onCheckedChange={(c) => setDraft({ ...draft, [f.key]: c === true })}
+                      />
+                      <label htmlFor={`chk-${f.key}`} className="text-[12px] font-semibold text-muted-foreground cursor-pointer">
+                        مفعّل
+                      </label>
                     </span>
                   ) : f.type === "textarea" ? (
-                    <textarea
+                    <Textarea
                       rows={3}
-                      className={`${control} h-auto py-2`}
+                      className="rounded-xl border-input bg-background text-[13px] font-medium text-foreground"
                       value={String(draft[f.key] ?? "")}
                       onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })}
                     />
                   ) : (
-                    <input
+                    <ShadcnInput
                       type={f.type === "number" ? "number" : f.type === "date" ? "date" : "text"}
-                      className={control}
+                      className={cn(
+                        "h-10 rounded-xl border-input bg-background text-[13px] font-medium text-foreground",
+                        (f.type === "number" || f.type === "date") && "font-mono"
+                      )}
                       value={String(draft[f.key] ?? "")}
                       onChange={(e) =>
                         setDraft({
@@ -294,17 +326,18 @@ export function CrudTable({
                 </label>
               ))}
             </div>
-            <div className="flex flex-wrap gap-2 border-t border-border px-5 py-4">
-              <Btn icon="save" onClick={submit}>
-                {save.isPending ? "جارٍ الحفظ..." : "حفظ"}
-              </Btn>
-              <Btn icon="close" variant="ghost" onClick={() => setDraft(null)}>
-                إلغاء
-              </Btn>
-            </div>
-          </div>
-        </div>
-      )}
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t border-border">
+            <Btn icon="save" onClick={submit} disabled={save.isPending}>
+              {save.isPending ? "جارٍ الحفظ..." : "حفظ التغييرات"}
+            </Btn>
+            <Btn icon="close" variant="ghost" onClick={() => setDraft(null)}>
+              إلغاء
+            </Btn>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

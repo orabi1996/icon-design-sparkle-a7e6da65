@@ -7,6 +7,15 @@ import { nav } from "@/components/hr/nav-data";
 import { supabase } from "@/integrations/supabase/client";
 import { CompanyWorkspaceProvider, useCompanyWorkspace } from "@/components/hr/CompanyWorkspace";
 import { ScreenDirectory } from "@/components/hr/ScreenDirectory";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const ShellContext = createContext(false);
 function CompanyName() {
@@ -101,27 +110,69 @@ function AuthenticatedShell({ children }: { children: ReactNode }) {
 
             <div className="mx-2 hidden h-7 w-px bg-white/20 sm:block" />
 
-            {/* Google Profile Pill Chip */}
-            <div className="flex items-center gap-2.5 rounded-full bg-white/10 py-1 pe-3 ps-1 ring-1 ring-white/15">
-              <span className="grid size-8 place-items-center rounded-full bg-[#0b57d0] text-sm font-bold text-white shadow-2xs">
-                <MaterialIcon name="person" size={18} filled />
-              </span>
-              <span className="hidden text-right leading-tight sm:block">
-                <span className="block text-xs font-bold text-white">مرحباً بك</span>
-                <span className="block max-w-[130px] truncate text-[10px] font-medium text-topbar-muted">
-                  {email}
-                </span>
-              </span>
-            </div>
-
-            <button
-              onClick={signOut}
-              className="grid size-9.5 place-items-center rounded-full text-topbar-muted transition-colors hover:bg-white/15 hover:text-white"
-              aria-label="تسجيل الخروج"
-              title="تسجيل الخروج"
-            >
-              <MaterialIcon name="logout" size={20} />
-            </button>
+            {/* Shadcn Profile Dropdown Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex items-center gap-2.5 rounded-full bg-white/10 py-1 pe-3 ps-1 ring-1 ring-white/15 transition hover:bg-white/20 focus:outline-none cursor-pointer"
+                >
+                  <Avatar className="size-8">
+                    <AvatarFallback className="bg-[#0b57d0] text-xs font-black text-white">
+                      {email ? email.slice(0, 2).toUpperCase() : "HR"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="hidden text-right leading-tight sm:block">
+                    <span className="block text-xs font-bold text-white">مرحباً بك</span>
+                    <span className="block max-w-[130px] truncate text-[10px] font-medium text-topbar-muted">
+                      {email}
+                    </span>
+                  </span>
+                  <MaterialIcon name="arrow_drop_down" size={18} className="text-topbar-muted" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-2xl p-1.5 shadow-xl border-border bg-card">
+                <DropdownMenuLabel className="px-3 py-2 text-right">
+                  <span className="block text-xs font-bold text-foreground">الحساب النشط</span>
+                  <span className="block truncate text-[11px] font-mono text-muted-foreground">{email}</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/settings/general" className="flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl cursor-pointer">
+                    <span className="flex items-center gap-2">
+                      <MaterialIcon name="settings" size={17} className="text-muted-foreground" />
+                      <span>إعدادات النظام</span>
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/request-notifications" className="flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl cursor-pointer">
+                    <span className="flex items-center gap-2">
+                      <MaterialIcon name="notifications" size={17} className="text-muted-foreground" />
+                      <span>الإشعارات والتعميمات</span>
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/tasks" className="flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl cursor-pointer">
+                    <span className="flex items-center gap-2">
+                      <MaterialIcon name="task_alt" size={17} className="text-muted-foreground" />
+                      <span>المهام والطلبات</span>
+                    </span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={signOut}
+                  className="flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-xl text-destructive focus:bg-destructive/10 focus:text-destructive cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <MaterialIcon name="logout" size={17} />
+                    <span>تسجيل الخروج</span>
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
