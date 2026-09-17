@@ -1,7 +1,11 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useRows, type Row } from "@/lib/hr-db";
+import { useCompanyWorkspace } from "@/components/hr/CompanyWorkspace";
+import { transitionEmployeeStatusFn } from "@/lib/employee.functions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/staff/")({
@@ -147,12 +151,76 @@ function StaffList() {
     ascending: true,
   });
 
+  const queryClient = useQueryClient();
+  const workspace = useCompanyWorkspace();
+  const company = workspace.selectedCompany;
+
   const [filters, setFilters] = useState<Filters>(emptyFilters);
   const [appliedFilters, setAppliedFilters] = useState<Filters | null>(null);
   const [globalSearch, setGlobalSearch] = useState("");
   const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
+
+  // Lifecycle transition modal state
+  const [isLifecycleModalOpen, setIsLifecycleModalOpen] = useState(false);
+  const [selectedEmp, setSelectedEmp] = useState<Row | null>(null);
+  const [targetStatus, setTargetStatus] = useState<
+    "active" | "probation" | "suspended" | "on_leave" | "terminated" | "resigned"
+  >("active");
+  const [transitionReason, setTransitionReason] = useState("");
+  const [transitionNotes, setTransitionNotes] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10));
+  const [isSubmittingTransition, setIsSubmittingTransition] = useState(false);
+
+  const handleOpenLifecycle = (emp: Row) => {
+    setSelectedEmp(emp);
+    const currentSt = String(emp["employment_status"] ?? emp["status"] ?? "active").toLowerCase();
+    setTargetStatus(currentSt === "active" ? "suspended" : "active");
+    setTransitionReason("");
+    setTransitionNotes("");
+    setEffectiveDate(new Date().toISOString().slice(0, 10));
+    setIsLifecycleModalOpen(true);
+  };
+
+  const handleSaveTransition = async () => {
+    if (!selectedEmp) return;
+    const empId = String(selectedEmp["id"] ?? "");
+    if (!empId) {
+      toast.error("معرف الموظف غير صالح");
+      return;
+    }
+    if (!transitionReason.trim()) {
+      toast.error("سبب تغيير الحالة التشغيلية إلزامي (3 أحرف على الأقل)");
+      return;
+    }
+    if (!company?.tenant_id || !company?.id) {
+      toast.error("يرجى اختيار شركة من مساحة العمل");
+      return;
+    }
+
+    setIsSubmittingTransition(true);
+    try {
+      await transitionEmployeeStatusFn({
+        data: {
+          tenantId: company.tenant_id,
+          companyId: company.id,
+          employeeId: empId,
+          targetStatus,
+          reason: transitionReason.trim(),
+          notes: transitionNotes.trim() || undefined,
+          effectiveDate,
+        },
+      });
+      toast.success("تم تحديث الحالة التشغيلية للموظف وتسجيلها في السجل التاريخي بنجاح");
+      queryClient.invalidateQueries({ queryKey: ["employees"] });
+      setIsLifecycleModalOpen(false);
+    } catch (err: any) {
+      toast.error(`تعذر تحديث الحالة: ${err.message}`);
+    } finally {
+      setIsSubmittingTransition(false);
+    }
+  };
 
   const optionSets = useMemo(
     () => ({
@@ -198,6 +266,11 @@ function StaffList() {
         value: (row) => String(row["employment_category"] ?? row["job_level"] ?? ""),
       },
       {
+        key: "status",
+        label: "الحالة التشغيلية",
+        value: (row) => String(row["status"] ?? row["employment_status"] ?? "نشط"),
+      },
+      {
         key: "hire_date",
         label: "تاريخ التعيين",
         value: (row) => String(row["hire_date"] ?? ""),
@@ -218,6 +291,12 @@ function StaffList() {
       {
         key: "financial",
         label: "البيانات المالية",
+        value: () => "",
+        type: "action",
+      },
+      {
+        key: "lifecycle",
+        label: "إدارة الحالة",
         value: () => "",
         type: "action",
       },
@@ -604,6 +683,30 @@ function StaffList() {
                           >
                             <MaterialIcon name="payments" size={17} />
                           </Link>
+                        ) : column.key === "lifecycle" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenLifecycle(row)}
+                            title="تعديل الحالة التشغيلية (إنهاء الخدمة، إيقاف، تثبيت)"
+                            className="inline-flex text-primary hover:text-primary/80 transition hover:scale-110 cursor-pointer p-1"
+                          >
+                            <MaterialIcon name="manage_accounts" size={18} />
+                          </button>
+                        ) : column.key === "status" ? (
+                          (() => {
+                            const st = String(row["status"] ?? row["employment_status"] ?? "نشط");
+                            let badgeCls = "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300";
+                            if (st.includes("تجربة") || st === "probation") badgeCls = "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300";
+                            else if (st.includes("موقوف") || st === "suspended") badgeCls = "bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300";
+                            else if (st.includes("منتهي") || st === "terminated") badgeCls = "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300";
+                            else if (st.includes("مستقيل") || st === "resigned") badgeCls = "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+                            else if (st.includes("إجازة") || st === "on_leave") badgeCls = "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300";
+                            return (
+                              <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold", badgeCls)}>
+                                {st}
+                              </span>
+                            );
+                          })()
                         ) : column.key === "emp_no" || column.key === "national_id" ? (
                           <span className="font-mono">{column.value(row) || "—"}</span>
                         ) : (
@@ -667,6 +770,122 @@ function StaffList() {
           ))}
         </div>
       </div>
+
+      {/* Lifecycle Transition Modal */}
+      {isLifecycleModalOpen && selectedEmp && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4"
+          dir="rtl"
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-card p-5 shadow-2xl border border-border">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <h3 className="text-sm font-extrabold text-foreground flex items-center gap-2">
+                <MaterialIcon name="manage_accounts" size={20} className="text-primary" />
+                إدارة الحالة التشغيلية للموظف
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsLifecycleModalOpen(false)}
+                className="text-muted-foreground hover:text-foreground transition"
+              >
+                <MaterialIcon name="close" size={20} />
+              </button>
+            </div>
+
+            {/* Employee summary */}
+            <div className="mb-4 rounded-xl bg-muted/40 p-3 border border-border/80 text-xs">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-muted-foreground">اسم الموظف:</span>
+                <span className="font-bold text-foreground">{String(selectedEmp["full_name"] ?? "")}</span>
+              </div>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-muted-foreground">الرقم الوظيفي:</span>
+                <span className="font-mono font-bold text-primary">{String(selectedEmp["emp_no"] ?? "")}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">الحالة الحالية:</span>
+                <span className="font-bold text-foreground">
+                  {String(selectedEmp["status"] ?? selectedEmp["employment_status"] ?? "نشط")}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-bold text-foreground">الحالة المستهدفة *</span>
+                <select
+                  value={targetStatus}
+                  onChange={(e) => setTargetStatus(e.target.value as any)}
+                  className="h-9 w-full rounded-xl border border-input bg-background px-3 text-[12px] font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/25"
+                >
+                  <option value="active">نشط (على رأس العمل)</option>
+                  <option value="probation">تحت التجربة</option>
+                  <option value="suspended">موقوف عن العمل</option>
+                  <option value="on_leave">في إجازة</option>
+                  <option value="terminated">إنهاء خدمة (حفظ تاريخي)</option>
+                  <option value="resigned">مستقيل (حفظ تاريخي)</option>
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-bold text-foreground">تاريخ السريان *</span>
+                <input
+                  type="date"
+                  value={effectiveDate}
+                  onChange={(e) => setEffectiveDate(e.target.value)}
+                  className="h-9 w-full rounded-xl border border-input bg-background px-3 text-[12px] font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/25"
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 sm:col-span-2">
+                <span className="text-xs font-bold text-foreground">سبب تغيير الحالة *</span>
+                <input
+                  type="text"
+                  value={transitionReason}
+                  onChange={(e) => setTransitionReason(e.target.value)}
+                  placeholder="مثال: انتهاء فترة التجربة بنجاح / انتهاء مدة العقد / قرار إداري"
+                  className="h-9 w-full rounded-xl border border-input bg-background px-3 text-[12px] font-semibold text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/25"
+                />
+              </label>
+
+              <label className="flex flex-col gap-1 sm:col-span-2">
+                <span className="text-xs font-bold text-foreground">ملاحظات إضافية (اختياري)</span>
+                <textarea
+                  rows={2}
+                  value={transitionNotes}
+                  onChange={(e) => setTransitionNotes(e.target.value)}
+                  placeholder="أي تفاصيل أو مراجع إدارية للقرار..."
+                  className="w-full rounded-xl border border-input bg-background p-2 text-[12px] font-medium text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/25"
+                />
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                <MaterialIcon name="verified_user" size={14} className="text-emerald-600" />
+                يتم تسجيل التغيير في سجل الحركات التاريخية
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLifecycleModalOpen(false)}
+                  className="px-4 h-9 rounded-xl border border-input text-foreground text-xs font-bold hover:bg-muted transition"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveTransition}
+                  disabled={isSubmittingTransition}
+                  className="px-5 h-9 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold shadow-xs transition disabled:opacity-50"
+                >
+                  {isSubmittingTransition ? "جاري الحفظ..." : "تطبيق الحالة"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

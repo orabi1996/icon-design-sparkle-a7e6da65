@@ -11,6 +11,7 @@ import { MaterialIcon } from "@/components/MaterialIcon";
 import { Breadcrumbs } from "@/components/hr/ui";
 import { useRows, useSaveRow, type Row } from "@/lib/hr-db";
 import { supabase } from "@/integrations/supabase/client";
+import { isValidSaudiNationalId, isValidIban } from "@/lib/employee-core.mjs";
 
 type Value = string | number | boolean;
 
@@ -438,9 +439,32 @@ export function EmployeeWizard() {
       toast.error("يرجى استكمال: " + missing.map((key) => labels[key] ?? key).join("، "));
       return false;
     }
+    if (index === 0 && form.national_id) {
+      const nid = String(form.national_id).trim();
+      if (/^[12]\d{9}$/.test(nid) && !isValidSaudiNationalId(nid)) {
+        toast.error("رقم الهوية الوطنية / الإقامة غير صحيح وفق خوارزمية التدقيق الرسمية");
+        return false;
+      }
+      if (form.birth_date) {
+        const bDate = new Date(String(form.birth_date));
+        const today = new Date();
+        const age = (today.getTime() - bDate.getTime()) / (365.25 * 24 * 3600 * 1000);
+        if (age < 18) {
+          toast.error("يجب ألا يقل عمر الموظف عن 18 عاماً نظاماً");
+          return false;
+        }
+      }
+    }
     if (index === 2 && !String(form.email).includes("@")) {
       toast.error("يرجى إدخال بريد إلكتروني صحيح");
       return false;
+    }
+    if (index === 3 && form.iban) {
+      const ibanClean = String(form.iban).replaceAll(/\s+/g, "").toUpperCase();
+      if (!isValidIban(ibanClean)) {
+        toast.error("صيغة الآيبان البنكي غير صحيحة أو رمز التدقيق البنكي غير مطابق");
+        return false;
+      }
     }
     return true;
   };
