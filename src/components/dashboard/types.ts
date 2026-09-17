@@ -35,18 +35,69 @@ export type WidgetType =
   | "job_categories"
   | "sectors"
   | "data_explorer"
-  | "payroll_summary";
+  | "payroll_summary"
+  | "custom";
+
+export type CustomChartType =
+  | "kpi_card"
+  | "bar"
+  | "horizontal_bar"
+  | "pie"
+  | "donut"
+  | "progress_list"
+  | "table";
+
+export type CustomDataSource =
+  | "employees"
+  | "attendance"
+  | "leave_requests"
+  | "requests"
+  | "loans"
+  | "payroll_runs";
+
+export type CustomMetricType = "count" | "sum" | "avg" | "percent";
+
+export interface CustomWidgetDefinition {
+  id: string;
+  title: string;
+  description?: string | undefined;
+  category: string;
+  icon: string;
+  defaultColSpan: number;
+  isPublic: boolean;
+  createdBy?: string | undefined;
+  createdAt: string;
+  updatedAt: string;
+
+  dataSource: CustomDataSource;
+  metricType: CustomMetricType;
+  valueField?: string | undefined;
+  dimension?: string | undefined;
+  chartType: CustomChartType;
+
+  filterCriteria?: {
+    status?: string | undefined;
+    branch?: string | undefined;
+    department?: string | undefined;
+    sector?: string | undefined;
+    minAmount?: number | undefined;
+  } | undefined;
+  limit?: number | undefined;
+  toneColor?: string | undefined;
+}
 
 export interface WidgetSettings {
-  title?: string;
-  dimension?: "department" | "branch" | "nationality" | "jobLevel" | "jobCategory" | "sector";
-  chartType?: "bar" | "horizontal_bar" | "pie" | "donut" | "area" | "line";
-  limit?: number;
-  showPercent?: boolean;
-  showDataLabels?: boolean;
-  saudizationEnabled?: boolean;
-  sortBy?: "count" | "name" | "amount";
-  sortOrder?: "asc" | "desc";
+  title?: string | undefined;
+  dimension?: "department" | "branch" | "nationality" | "jobLevel" | "jobCategory" | "sector" | string | undefined;
+  chartType?: "bar" | "horizontal_bar" | "pie" | "donut" | "area" | "line" | CustomChartType | undefined;
+  limit?: number | undefined;
+  showPercent?: boolean | undefined;
+  showDataLabels?: boolean | undefined;
+  saudizationEnabled?: boolean | undefined;
+  sortBy?: "count" | "name" | "amount" | undefined;
+  sortOrder?: "asc" | "desc" | undefined;
+  customWidgetId?: string | undefined;
+  customDefinition?: CustomWidgetDefinition | undefined;
   [key: string]: any;
 }
 

@@ -4,8 +4,14 @@ import { MaterialIcon } from "@/components/MaterialIcon";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import type { DashboardLayout, WidgetConfig, WidgetType } from "../types";
+import type { DashboardLayout, WidgetConfig, WidgetType, CustomWidgetDefinition } from "../types";
 import { WIDGET_REGISTRY } from "../registry";
+import {
+  loadCustomWidgets,
+  saveCustomWidget,
+  deleteCustomWidget,
+} from "../services/customWidgetsStorage";
+import { CustomWidgetDialog } from "./CustomWidgetDialog";
 
 export interface DashboardStudioDrawerProps {
   isOpen: boolean;
@@ -35,6 +41,9 @@ interface ElementMeta {
   category: string;
   description: string;
   defaultColSpan: number;
+  isCustom?: boolean;
+  customId?: string;
+  definition?: CustomWidgetDefinition;
 }
 
 const ALL_ELEMENTS: ElementMeta[] = [
@@ -144,6 +153,11 @@ export function DashboardStudioDrawer({
     dashboard.widgets[0]?.id ?? null
   );
 
+  // Custom widgets library state
+  const [customWidgets, setCustomWidgets] = useState<CustomWidgetDefinition[]>(() => loadCustomWidgets());
+  const [customDialogOpen, setCustomDialogOpen] = useState(false);
+  const [editingCustomWidget, setEditingCustomWidget] = useState<CustomWidgetDefinition | null>(null);
+
   // Drag-and-drop state for layers tab
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -167,26 +181,89 @@ export function DashboardStudioDrawer({
     [dashboard.widgets]
   );
 
+  // Merge built-in elements with custom public elements
+  const allAvailableElements: ElementMeta[] = useMemo(() => {
+    const customMeta: ElementMeta[] = customWidgets.map((cw) => ({
+      type: "custom",
+      title: cw.title,
+      icon: cw.icon,
+      category: cw.category,
+      description: cw.description || "",
+      defaultColSpan: cw.defaultColSpan,
+      isCustom: true,
+      customId: cw.id,
+      definition: cw,
+    }));
+    return [...ALL_ELEMENTS, ...customMeta];
+  }, [customWidgets]);
+
   // Filtered elements in library
   const filteredElements = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return ALL_ELEMENTS;
-    return ALL_ELEMENTS.filter(
+    if (!q) return allAvailableElements;
+    return allAvailableElements.filter(
       (el) =>
         el.title.toLowerCase().includes(q) ||
         el.category.toLowerCase().includes(q) ||
         el.description.toLowerCase().includes(q)
     );
-  }, [searchQuery]);
+  }, [searchQuery, allAvailableElements]);
 
-  // Check if an element type is currently enabled and visible
-  const isElementActive = (type: WidgetType) => {
-    const existing = dashboard.widgets.find((w) => w.type === type);
+  // Check if an element is currently enabled and visible
+  const isElementActive = (el: ElementMeta) => {
+    if (el.isCustom && el.customId) {
+      return dashboard.widgets.some(
+        (w) =>
+          w.type === "custom" &&
+          (w.settings?.customWidgetId === el.customId ||
+            w.settings?.customDefinition?.id === el.customId) &&
+          !w.hidden
+      );
+    }
+    const existing = dashboard.widgets.find((w) => w.type === el.type);
     return existing ? !existing.hidden : false;
   };
 
   // Toggle element on/off directly from 2-column grid
   const handleToggleElement = (element: ElementMeta) => {
+    if (element.isCustom && element.customId) {
+      const existingIndex = dashboard.widgets.findIndex(
+        (w) =>
+          w.type === "custom" &&
+          (w.settings?.customWidgetId === element.customId ||
+            w.settings?.customDefinition?.id === element.customId)
+      );
+
+      if (existingIndex !== -1) {
+        const updatedWidgets = [...dashboard.widgets];
+        const target = updatedWidgets[existingIndex]!;
+        updatedWidgets[existingIndex] = {
+          ...target,
+          hidden: !target.hidden,
+        };
+        onUpdateDashboard({ ...dashboard, widgets: updatedWidgets });
+        if (target.hidden) setSelectedWidgetId(target.id);
+      } else {
+        const newWidget: WidgetConfig = {
+          id: `w-cw-${element.customId}-${Date.now()}`,
+          type: "custom",
+          title: element.title,
+          colSpan: element.defaultColSpan || 6,
+          hidden: false,
+          settings: {
+            customWidgetId: element.customId,
+            customDefinition: element.definition,
+          },
+        };
+        onUpdateDashboard({
+          ...dashboard,
+          widgets: [...dashboard.widgets, newWidget],
+        });
+        setSelectedWidgetId(newWidget.id);
+      }
+      return;
+    }
+
     const existingIndex = dashboard.widgets.findIndex((w) => w.type === element.type);
 
     if (existingIndex !== -1) {
@@ -219,6 +296,56 @@ export function DashboardStudioDrawer({
       });
       setSelectedWidgetId(newWidget.id);
     }
+  };
+
+  // Custom widget management
+  const handleSaveCustomWidget = async (saved: CustomWidgetDefinition) => {
+    const updated = await saveCustomWidget(saved);
+    setCustomWidgets(updated);
+
+    // If active dashboard contains this widget, update its title & definition
+    const updatedWidgets = dashboard.widgets.map((w) => {
+      if (
+        w.type === "custom" &&
+        (w.settings?.customWidgetId === saved.id ||
+          w.settings?.customDefinition?.id === saved.id)
+      ) {
+        return {
+          ...w,
+          title: saved.title,
+          colSpan: saved.defaultColSpan,
+          settings: {
+            ...w.settings,
+            customWidgetId: saved.id,
+            customDefinition: saved,
+          },
+        };
+      }
+      return w;
+    });
+    onUpdateDashboard({ ...dashboard, widgets: updatedWidgets });
+  };
+
+  const handleDeleteCustomWidget = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (confirm("هل ترغب في حذف هذا العنصر المخصص نهائياً من النظام؟")) {
+      const updated = await deleteCustomWidget(id);
+      setCustomWidgets(updated);
+      onUpdateDashboard({
+        ...dashboard,
+        widgets: dashboard.widgets.filter(
+          (w) =>
+            w.settings?.customWidgetId !== id &&
+            w.settings?.customDefinition?.id !== id
+        ),
+      });
+    }
+  };
+
+  const handleEditCustomWidget = (e: React.MouseEvent, cw: CustomWidgetDefinition) => {
+    e.stopPropagation();
+    setEditingCustomWidget(cw);
+    setCustomDialogOpen(true);
   };
 
   // Move layer up
@@ -562,6 +689,19 @@ export function DashboardStudioDrawer({
               {/* ==================================================== */}
               {activeTab === "elements" && (
                 <div className="space-y-3.5">
+                  {/* Create New Custom Element Button */}
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setEditingCustomWidget(null);
+                      setCustomDialogOpen(true);
+                    }}
+                    className="w-full gap-2 rounded-xl text-xs font-black shadow-xs bg-[#0b57d0] hover:bg-[#0842a0] text-white py-2.5 h-auto transition-all"
+                  >
+                    <MaterialIcon name="add_circle" size={17} />
+                    <span>إنشاء عنصر مخصص جديد (عام للنظام)</span>
+                  </Button>
+
                   {/* Search Box */}
                   <div className="relative">
                     <MaterialIcon
@@ -600,19 +740,19 @@ export function DashboardStudioDrawer({
                   {/* 2-Column Grid of Widget Cards */}
                   <div className="grid grid-cols-2 gap-2.5">
                     {filteredElements.map((el) => {
-                      const active = isElementActive(el.type);
+                      const active = isElementActive(el);
+                      const elementKey = el.isCustom ? `cw-${el.customId}` : el.type;
                       return (
-                        <button
-                          key={el.type}
-                          type="button"
-                          onClick={() => handleToggleElement(el)}
+                        <div
+                          key={elementKey}
                           className={`relative flex flex-col items-start p-3 rounded-2xl border text-right transition-all duration-150 cursor-pointer select-none ${
                             active
                               ? "border-[#0b57d0] bg-blue-50/70 dark:border-blue-500 dark:bg-blue-950/40 shadow-xs ring-1 ring-[#0b57d0]/30"
                               : "border-slate-200 bg-slate-50/60 dark:border-slate-800 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-slate-300 text-slate-600 dark:text-slate-300"
                           }`}
+                          onClick={() => handleToggleElement(el)}
                         >
-                          {/* Active Checkmark Pill in Corner */}
+                          {/* Top: Icon + Active Checkmark */}
                           <div className="w-full flex items-center justify-between mb-2">
                             <span
                               className={`grid size-8 place-items-center rounded-xl transition ${
@@ -640,11 +780,41 @@ export function DashboardStudioDrawer({
                             {el.title}
                           </h4>
 
-                          {/* Category Tag */}
-                          <span className="text-[10px] font-medium text-slate-400 mt-1 line-clamp-1">
-                            {el.category}
-                          </span>
-                        </button>
+                          {/* Footer: Category + Public Badge + Custom Actions */}
+                          <div className="flex items-center justify-between w-full mt-2 pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50 gap-1">
+                            <span className="text-[10px] font-medium text-slate-400 line-clamp-1">
+                              {el.category}
+                            </span>
+
+                            {el.isCustom && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-950/70 dark:text-purple-300">
+                                  عام
+                                </span>
+                                {el.definition && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleEditCustomWidget(e, el.definition!)}
+                                    title="تعديل هذا العنصر المخصص"
+                                    className="size-5 grid place-items-center rounded text-slate-400 hover:text-[#0b57d0] hover:bg-blue-100 dark:hover:bg-blue-950 transition cursor-pointer"
+                                  >
+                                    <MaterialIcon name="edit" size={12} />
+                                  </button>
+                                )}
+                                {el.customId && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteCustomWidget(e, el.customId!)}
+                                    title="حذف هذا العنصر"
+                                    className="size-5 grid place-items-center rounded text-slate-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-950 transition cursor-pointer"
+                                  >
+                                    <MaterialIcon name="delete" size={12} />
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -1065,6 +1235,17 @@ export function DashboardStudioDrawer({
           </aside>
         )}
       </div>
+
+      {/* Custom Public Widget Dialog */}
+      <CustomWidgetDialog
+        isOpen={customDialogOpen}
+        onClose={() => {
+          setCustomDialogOpen(false);
+          setEditingCustomWidget(null);
+        }}
+        onSave={handleSaveCustomWidget}
+        initialWidget={editingCustomWidget}
+      />
     </>
   );
 }

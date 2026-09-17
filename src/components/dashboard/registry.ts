@@ -9,6 +9,7 @@ import { JobCategoryWidget } from "./widgets/JobCategoryWidget";
 import { SectorDistributionWidget } from "./widgets/SectorDistributionWidget";
 import { PayrollSummaryWidget } from "./widgets/PayrollSummaryWidget";
 import { DataExplorerWidget } from "./widgets/DataExplorerWidget";
+import { CustomWidgetRenderer } from "./widgets/CustomWidgetRenderer";
 
 export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryItem> = {
   live_attendance: {
@@ -102,5 +103,14 @@ export const WIDGET_REGISTRY: Record<WidgetType, WidgetRegistryItem> = {
     icon: "table_chart",
     defaultColSpan: 12,
     component: DataExplorerWidget,
+  },
+  custom: {
+    type: "custom",
+    title: "عنصر مخصص من النظام",
+    category: "analytics",
+    description: "عنصر تحليلي ديناميكي مخصص ومشارك للنظام بالكامل.",
+    icon: "tune",
+    defaultColSpan: 6,
+    component: CustomWidgetRenderer,
   },
 };
