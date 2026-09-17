@@ -5,6 +5,7 @@ import { Breadcrumbs } from "@/components/hr/ui";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useRows, useSaveRow, useDeleteRow, type Row } from "@/lib/hr-db";
 import { notifyWorkflow } from "@/lib/email/dispatcher";
+import { decideWorkflowStageFn, getRequestApprovalHistoryFn } from "@/lib/workflow.functions";
 
 export const Route = createFileRoute("/approval-requests")({
   head: () => ({
@@ -129,6 +130,17 @@ function ApprovalRequestsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
 
+  // Workflow Rejection Modal State
+  const [rejectionTarget, setRejectionTarget] = useState<Row | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionError, setRejectionError] = useState<string | null>(null);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  // Workflow Timeline / Audit Modal State
+  const [timelineTarget, setTimelineTarget] = useState<Row | null>(null);
+  const [timelineData, setTimelineData] = useState<any | null>(null);
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false);
+
   const filtered = useMemo(() => {
     const t = term.trim();
     return rows.filter((r) => {
@@ -202,95 +214,162 @@ function ApprovalRequestsPage() {
   };
 
   const approve = async (r: Row) => {
-    const chain = String(r["approval_chain"] || "")
-      .split(/[,،\n]+/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const currentStage = String(r["awaiting_stage"] || "المدير المباشر");
-    const currentIndex = chain.indexOf(currentStage);
-
-    const hasNextStage = currentIndex >= 0 && currentIndex < chain.length - 1;
-    const nextStage = hasNextStage ? chain[currentIndex + 1]! : null;
-    const nextStatus = hasNextStage ? "pending" : "approved";
-
-    await save.mutateAsync({
-      ...r,
-      status: nextStatus,
-      awaiting_stage: nextStage || currentStage,
-      decision_at: new Date().toISOString(),
-      decision_by: "المشرف",
-    });
-
-    if (hasNextStage && nextStage) {
-      notifyWorkflow({
-        eventType: "stage_approved",
-        requestId: String(r["id"]),
-        requestNumber: r["request_number"],
-        requestType: String(r["request_type"]),
-        employeeId: r["employee_id"],
-        employeeName: r["employee_name"],
-        employeeCode: r["emp_no"],
-        previousStage: currentStage,
-        currentStage: nextStage,
-        actionBy: "المشرف",
-        actionDate: new Date().toLocaleDateString("ar-SA"),
-      });
-
-      notifyWorkflow({
-        eventType: "stage_assigned",
-        requestId: String(r["id"]),
-        requestNumber: r["request_number"],
-        requestType: String(r["request_type"]),
-        employeeId: r["employee_id"],
-        employeeName: r["employee_name"],
-        employeeCode: r["emp_no"],
-        currentStage: nextStage,
-        actionUrl: typeof window !== "undefined" ? `${window.location.origin}/approval-requests` : "/approval-requests",
-        actionDate: new Date().toLocaleDateString("ar-SA"),
-      });
+    setOpenMenu(null);
+    if (r["request_instance_id"]) {
+      try {
+        await decideWorkflowStageFn({
+          data: {
+            requestInstanceId: String(r["request_instance_id"]),
+            action: "approve",
+          },
+        });
+      } catch (err: any) {
+        alert(`تعذر تنفيذ الاعتماد: ${err.message}`);
+        return;
+      }
     } else {
-      notifyWorkflow({
-        eventType: "final_approved",
-        requestId: String(r["id"]),
-        requestNumber: r["request_number"],
-        requestType: String(r["request_type"]),
-        employeeId: r["employee_id"],
-        employeeName: r["employee_name"],
-        employeeCode: r["emp_no"],
-        currentStage: currentStage,
-        actionBy: "المشرف",
-        actionDate: new Date().toLocaleDateString("ar-SA"),
-      });
-    }
+      const chain = String(r["approval_chain"] || "")
+        .split(/[,،\n]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const currentStage = String(r["awaiting_stage"] || "المدير المباشر");
+      const currentIndex = chain.indexOf(currentStage);
 
+      const hasNextStage = currentIndex >= 0 && currentIndex < chain.length - 1;
+      const nextStage = hasNextStage ? chain[currentIndex + 1]! : null;
+      const nextStatus = hasNextStage ? "pending" : "approved";
+
+      await save.mutateAsync({
+        ...r,
+        status: nextStatus,
+        awaiting_stage: nextStage || currentStage,
+        decision_at: new Date().toISOString(),
+        decision_by: "المشرف",
+      });
+
+      if (hasNextStage && nextStage) {
+        notifyWorkflow({
+          eventType: "stage_approved",
+          requestId: String(r["id"]),
+          requestNumber: r["request_number"],
+          requestType: String(r["request_type"]),
+          employeeId: r["employee_id"],
+          employeeName: r["employee_name"],
+          employeeCode: r["emp_no"],
+          previousStage: currentStage,
+          currentStage: nextStage,
+          actionBy: "المشرف",
+          actionDate: new Date().toLocaleDateString("ar-SA"),
+        });
+
+        notifyWorkflow({
+          eventType: "stage_assigned",
+          requestId: String(r["id"]),
+          requestNumber: r["request_number"],
+          requestType: String(r["request_type"]),
+          employeeId: r["employee_id"],
+          employeeName: r["employee_name"],
+          employeeCode: r["emp_no"],
+          currentStage: nextStage,
+          actionUrl: typeof window !== "undefined" ? `${window.location.origin}/approval-requests` : "/approval-requests",
+          actionDate: new Date().toLocaleDateString("ar-SA"),
+        });
+      } else {
+        notifyWorkflow({
+          eventType: "final_approved",
+          requestId: String(r["id"]),
+          requestNumber: r["request_number"],
+          requestType: String(r["request_type"]),
+          employeeId: r["employee_id"],
+          employeeName: r["employee_name"],
+          employeeCode: r["emp_no"],
+          currentStage: currentStage,
+          actionBy: "المشرف",
+          actionDate: new Date().toLocaleDateString("ar-SA"),
+        });
+      }
+    }
+  };
+
+  const openRejectModal = (r: Row) => {
+    setRejectionTarget(r);
+    setRejectionReason("");
+    setRejectionError(null);
     setOpenMenu(null);
   };
 
-  const reject = async (r: Row) => {
-    const reason = prompt("سبب الرفض؟") ?? "";
-    await save.mutateAsync({
-      ...r,
-      status: "rejected",
-      decision_at: new Date().toISOString(),
-      decision_reason: reason,
-      decision_by: "المشرف",
-    });
+  const confirmReject = async () => {
+    if (!rejectionTarget) return;
+    if (!rejectionReason.trim()) {
+      setRejectionError("سبب الرفض إلزامي عند رفض الطلب");
+      return;
+    }
 
-    notifyWorkflow({
-      eventType: "stage_rejected",
-      requestId: String(r["id"]),
-      requestNumber: r["request_number"],
-      requestType: String(r["request_type"]),
-      employeeId: r["employee_id"],
-      employeeName: r["employee_name"],
-      employeeCode: r["emp_no"],
-      currentStage: r["awaiting_stage"] || "مرحلة الاعتماد",
-      actionBy: "المشرف",
-      rejectionReason: reason || "لم يتم تحديد سبب",
-      actionDate: new Date().toLocaleDateString("ar-SA"),
-    });
+    setIsRejecting(true);
+    setRejectionError(null);
 
+    const r = rejectionTarget;
+    try {
+      if (r["request_instance_id"]) {
+        await decideWorkflowStageFn({
+          data: {
+            requestInstanceId: String(r["request_instance_id"]),
+            action: "reject",
+            rejectionReason: rejectionReason.trim(),
+          },
+        });
+      } else {
+        await save.mutateAsync({
+          ...r,
+          status: "rejected",
+          decision_at: new Date().toISOString(),
+          decision_reason: rejectionReason.trim(),
+          decision_by: "المشرف",
+        });
+
+        notifyWorkflow({
+          eventType: "stage_rejected",
+          requestId: String(r["id"]),
+          requestNumber: r["request_number"],
+          requestType: String(r["request_type"]),
+          employeeId: r["employee_id"],
+          employeeName: r["employee_name"],
+          employeeCode: r["emp_no"],
+          currentStage: r["awaiting_stage"] || "مرحلة الاعتماد",
+          actionBy: "المشرف",
+          rejectionReason: rejectionReason.trim(),
+          actionDate: new Date().toLocaleDateString("ar-SA"),
+        });
+      }
+
+      setRejectionTarget(null);
+      setRejectionReason("");
+    } catch (err: any) {
+      setRejectionError(err?.message || "تعذر رفض الطلب");
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
+  const openTimeline = async (r: Row) => {
+    setTimelineTarget(r);
     setOpenMenu(null);
+    if (r["request_instance_id"]) {
+      setIsTimelineLoading(true);
+      try {
+        const res = await getRequestApprovalHistoryFn({
+          data: { requestInstanceId: String(r["request_instance_id"]) },
+        });
+        setTimelineData(res);
+      } catch (err) {
+        console.warn("Could not load history:", err);
+        setTimelineData(null);
+      } finally {
+        setIsTimelineLoading(false);
+      }
+    } else {
+      setTimelineData(null);
+    }
   };
 
   return (
@@ -478,11 +557,16 @@ function ApprovalRequestsPage() {
                                 icon="close"
                                 label="رفض الطلب"
                                 tone="rose"
-                                onClick={() => reject(r)}
+                                onClick={() => openRejectModal(r)}
                               />
                               <div className="h-px bg-border" />
                             </>
                           )}
+                          <MenuItem
+                            icon="history"
+                            label="سجل الاعتماد والمراحل"
+                            onClick={() => openTimeline(r)}
+                          />
                           <MenuItem
                             icon="edit"
                             label="تعديل"
@@ -493,11 +577,21 @@ function ApprovalRequestsPage() {
                           />
                           <MenuItem
                             icon="delete"
-                            label="حذف"
+                            label="إلغاء الطلب"
                             tone="rose"
                             onClick={() => {
-                              if (confirm("هل تريد حذف هذا الطلب نهائياً؟"))
-                                del.mutate(String(r["id"]));
+                              if (confirm("هل تريد إلغاء هذا الطلب؟")) {
+                                if (r["request_instance_id"]) {
+                                  decideWorkflowStageFn({
+                                    data: {
+                                      requestInstanceId: String(r["request_instance_id"]),
+                                      action: "cancel",
+                                    },
+                                  }).catch((err: any) => alert(err.message));
+                                } else {
+                                  del.mutate(String(r["id"]));
+                                }
+                              }
                               setOpenMenu(null);
                             }}
                           />
@@ -735,6 +829,272 @@ function ApprovalRequestsPage() {
               >
                 <MaterialIcon name="close" size={18} />
                 إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Rejection Modal Dialog */}
+      {rejectionTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+          onClick={() => setRejectionTarget(null)}
+        >
+          <div
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="flex items-center justify-between border-b border-border bg-rose-50 px-5 py-4 dark:bg-rose-950/30">
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
+                <MaterialIcon name="block" size={20} />
+                <h3 className="text-[14px] font-extrabold">رفض الطلب</h3>
+              </div>
+              <button
+                onClick={() => setRejectionTarget(null)}
+                className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-rose-100 dark:hover:bg-rose-900/50"
+              >
+                <MaterialIcon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="rounded-xl border border-border bg-secondary/30 p-3 text-[12px] space-y-1">
+                <div className="font-bold text-foreground">
+                  {String(rejectionTarget["request_type"] ?? "طلب")} — {String(rejectionTarget["employee_name"] ?? "")}
+                </div>
+                <div className="text-muted-foreground">
+                  المرحلة الحالية: <span className="font-semibold text-foreground">{String(rejectionTarget["awaiting_stage"] ?? "المدير المباشر")}</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block mb-1.5 text-[12px] font-bold text-foreground">
+                  سبب الرفض <span className="text-destructive">*</span>
+                </label>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => {
+                    setRejectionReason(e.target.value);
+                    setRejectionError(null);
+                  }}
+                  placeholder="اكتب سبب الرفض بالتفصيل (مطلوب)..."
+                  rows={3}
+                  className="w-full rounded-xl border border-input bg-background p-3 text-[13px] outline-none transition focus:border-destructive focus:ring-2 focus:ring-destructive/20"
+                />
+                {rejectionError && (
+                  <p className="mt-1.5 text-[11px] font-bold text-destructive flex items-center gap-1">
+                    <MaterialIcon name="error" size={14} />
+                    {rejectionError}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border bg-secondary/20 px-5 py-3.5">
+              <button
+                onClick={() => setRejectionTarget(null)}
+                className="rounded-xl border border-border bg-background px-4 py-2 text-[12px] font-bold text-foreground hover:bg-secondary"
+              >
+                إلغاء
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={isRejecting}
+                className="flex items-center gap-1.5 rounded-xl bg-destructive px-4 py-2 text-[12px] font-bold text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+              >
+                <MaterialIcon name="close" size={16} />
+                {isRejecting ? "جارٍ الرفض..." : "تأكيد الرفض"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Timeline / Audit History Modal Dialog */}
+      {timelineTarget && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+          onClick={() => setTimelineTarget(null)}
+        >
+          <div
+            className="w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col rounded-2xl border border-border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            dir="rtl"
+          >
+            <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-5 py-4">
+              <div className="flex items-center gap-2 text-primary">
+                <MaterialIcon name="timeline" size={22} />
+                <h3 className="text-[14px] font-extrabold">سجل دورة الاعتماد وتاريخ الطلب</h3>
+              </div>
+              <button
+                onClick={() => setTimelineTarget(null)}
+                className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-secondary"
+              >
+                <MaterialIcon name="close" size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-5 space-y-5 flex-1">
+              {/* Header card */}
+              <div className="rounded-xl border border-border bg-secondary/20 p-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <div className="text-[14px] font-extrabold text-foreground">
+                    {String(timelineTarget["request_type"] ?? "طلب")}
+                  </div>
+                  <div className="text-[12px] text-muted-foreground mt-0.5">
+                    مقدم الطلب: <span className="font-semibold text-foreground">{String(timelineTarget["employee_name"] ?? "—")}</span>
+                    {timelineTarget["branch"] && ` — فرع ${String(timelineTarget["branch"])}`}
+                  </div>
+                </div>
+                <div className="text-left">
+                  <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-extrabold ${
+                    timelineTarget["status"] === "approved"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+                      : timelineTarget["status"] === "rejected"
+                        ? "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
+                        : "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+                  }`}>
+                    {timelineTarget["status"] === "approved" ? "معتمد نهائياً" : timelineTarget["status"] === "rejected" ? "مرفوض" : "بانتظار الاعتماد"}
+                  </span>
+                </div>
+              </div>
+
+              {isTimelineLoading ? (
+                <div className="py-12 text-center text-[13px] font-bold text-muted-foreground">
+                  جارٍ تحميل تفاصيل مسار الاعتماد...
+                </div>
+              ) : timelineData ? (
+                <div className="space-y-6">
+                  {/* Stages Timeline */}
+                  {timelineData.stages && timelineData.stages.length > 0 && (
+                    <div>
+                      <h4 className="text-[12px] font-extrabold text-muted-foreground uppercase mb-3 flex items-center gap-1.5">
+                        <MaterialIcon name="format_list_numbered" size={16} />
+                        مراحل سلسلة الاعتماد
+                      </h4>
+                      <div className="space-y-2">
+                        {timelineData.stages.map((st: any, idx: number) => {
+                          const isDone = st.status === "approved";
+                          const isCurrent = st.status === "pending";
+                          const isRejected = st.status === "rejected";
+
+                          return (
+                            <div
+                              key={st.id || idx}
+                              className={`flex items-center justify-between p-3 rounded-xl border ${
+                                isDone
+                                  ? "border-emerald-200 bg-emerald-50/40 dark:border-emerald-800/40 dark:bg-emerald-950/10"
+                                  : isRejected
+                                    ? "border-rose-200 bg-rose-50/40 dark:border-rose-800/40 dark:bg-rose-950/10"
+                                    : isCurrent
+                                      ? "border-amber-300 bg-amber-50/40 ring-1 ring-amber-300/50 dark:border-amber-700/40"
+                                      : "border-border bg-card"
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`grid size-7 place-items-center rounded-full text-[12px] font-extrabold ${
+                                  isDone
+                                    ? "bg-emerald-600 text-white"
+                                    : isRejected
+                                      ? "bg-rose-600 text-white"
+                                      : isCurrent
+                                        ? "bg-amber-500 text-white animate-pulse"
+                                        : "bg-secondary text-muted-foreground"
+                                }`}>
+                                  {idx + 1}
+                                </div>
+                                <div>
+                                  <div className="text-[12.5px] font-bold text-foreground">
+                                    {st.wf_stages?.name_ar || st.assigned_to_role || `المرحلة ${idx + 1}`}
+                                  </div>
+                                  <div className="text-[11px] text-muted-foreground">
+                                    المسؤول: {st.assigned_to_role || "الجهة المعتمدة"}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                                isDone
+                                  ? "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30"
+                                  : isRejected
+                                    ? "text-rose-700 bg-rose-100 dark:bg-rose-900/30"
+                                    : isCurrent
+                                      ? "text-amber-700 bg-amber-100 dark:bg-amber-900/30"
+                                      : "text-muted-foreground bg-secondary"
+                              }`}>
+                                {isDone ? "تم الاعتماد" : isRejected ? "مرفوضة" : isCurrent ? "قيد المراجعة" : "في الانتظار"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Actions Log */}
+                  {timelineData.actions && timelineData.actions.length > 0 && (
+                    <div>
+                      <h4 className="text-[12px] font-extrabold text-muted-foreground uppercase mb-3 flex items-center gap-1.5">
+                        <MaterialIcon name="receipt_long" size={16} />
+                        سجل الإجراءات والقرارات غير القابل للتعديل
+                      </h4>
+                      <div className="space-y-2.5">
+                        {timelineData.actions.map((act: any, idx: number) => (
+                          <div key={act.id || idx} className="rounded-xl border border-border bg-card p-3 text-[12px]">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-foreground">
+                                {act.action === "submit"
+                                  ? "تقديم الطلب"
+                                  : act.action === "approve"
+                                    ? "اعتماد المرحلة"
+                                    : act.action === "reject"
+                                      ? "رفض الطلب"
+                                      : act.action === "cancel"
+                                        ? "إلغاء الطلب"
+                                        : act.action}
+                                {act.is_delegated && (
+                                  <span className="ms-2 rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-800">
+                                    معتمد بالنيابة
+                                  </span>
+                                )}
+                              </span>
+                              <span dir="ltr" className="text-[11px] text-muted-foreground font-mono">
+                                {fmtDateEn(act.action_at)}
+                              </span>
+                            </div>
+                            {act.rejection_reason && (
+                              <div className="mt-1.5 rounded-lg bg-rose-50 p-2 text-rose-800 dark:bg-rose-950/20 dark:text-rose-200">
+                                <span className="font-bold">سبب الرفض: </span>
+                                {act.rejection_reason}
+                              </div>
+                            )}
+                            {act.comments && (
+                              <div className="mt-1 text-muted-foreground">
+                                <span className="font-semibold">ملاحظات: </span>
+                                {act.comments}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border p-4 text-center text-[12px] text-muted-foreground">
+                  طلب قديم مسجل بدون محرك الـWorkflow الموحد. سلسلة الاعتماد الحالية:{" "}
+                  <strong className="text-foreground">{String(timelineTarget["approval_chain"] || "المدير المباشر")}</strong>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-border bg-secondary/20 px-5 py-3 text-left">
+              <button
+                onClick={() => setTimelineTarget(null)}
+                className="rounded-xl border border-border bg-background px-4 py-2 text-[12px] font-bold text-foreground hover:bg-secondary"
+              >
+                إغلاق
               </button>
             </div>
           </div>
