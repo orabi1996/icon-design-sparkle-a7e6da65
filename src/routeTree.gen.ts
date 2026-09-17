@@ -95,6 +95,7 @@ import { Route as SettingsCalendarRouteImport } from './routes/settings.calendar
 import { Route as SettingsCompanyRouteImport } from './routes/settings.company'
 import { Route as SettingsCompanyDocumentsRouteImport } from './routes/settings.company-documents'
 import { Route as SettingsGeneralRouteImport } from './routes/settings.general'
+import { Route as SettingsOrganizationRouteImport } from './routes/settings.organization'
 import { Route as SettingsSponsorsRouteImport } from './routes/settings.sponsors'
 import { Route as SettingsSuspensionReasonsRouteImport } from './routes/settings.suspension-reasons'
 import { Route as ShiftsApprovalsRouteImport } from './routes/shifts.approvals'
@@ -569,6 +570,11 @@ const SettingsGeneralRoute = SettingsGeneralRouteImport.update({
   path: '/general',
   getParentRoute: () => SettingsRoute,
 } as any)
+const SettingsOrganizationRoute = SettingsOrganizationRouteImport.update({
+  id: '/organization',
+  path: '/organization',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const SettingsSponsorsRoute = SettingsSponsorsRouteImport.update({
   id: '/sponsors',
   path: '/sponsors',
@@ -797,6 +803,7 @@ export interface FileRoutesByFullPath {
   '/settings/company': typeof SettingsCompanyRoute
   '/settings/company-documents': typeof SettingsCompanyDocumentsRoute
   '/settings/general': typeof SettingsGeneralRoute
+  '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/sponsors': typeof SettingsSponsorsRoute
   '/settings/suspension-reasons': typeof SettingsSuspensionReasonsRoute
   '/shifts/approvals': typeof ShiftsApprovalsRoute
@@ -911,6 +918,7 @@ export interface FileRoutesByTo {
   '/settings/company': typeof SettingsCompanyRoute
   '/settings/company-documents': typeof SettingsCompanyDocumentsRoute
   '/settings/general': typeof SettingsGeneralRoute
+  '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/sponsors': typeof SettingsSponsorsRoute
   '/settings/suspension-reasons': typeof SettingsSuspensionReasonsRoute
   '/shifts/approvals': typeof ShiftsApprovalsRoute
@@ -1028,6 +1036,7 @@ export interface FileRoutesById {
   '/settings/company': typeof SettingsCompanyRoute
   '/settings/company-documents': typeof SettingsCompanyDocumentsRoute
   '/settings/general': typeof SettingsGeneralRoute
+  '/settings/organization': typeof SettingsOrganizationRoute
   '/settings/sponsors': typeof SettingsSponsorsRoute
   '/settings/suspension-reasons': typeof SettingsSuspensionReasonsRoute
   '/shifts/approvals': typeof ShiftsApprovalsRoute
@@ -1146,6 +1155,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/company-documents'
     | '/settings/general'
+    | '/settings/organization'
     | '/settings/sponsors'
     | '/settings/suspension-reasons'
     | '/shifts/approvals'
@@ -1260,6 +1270,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/company-documents'
     | '/settings/general'
+    | '/settings/organization'
     | '/settings/sponsors'
     | '/settings/suspension-reasons'
     | '/shifts/approvals'
@@ -1376,6 +1387,7 @@ export interface FileRouteTypes {
     | '/settings/company'
     | '/settings/company-documents'
     | '/settings/general'
+    | '/settings/organization'
     | '/settings/sponsors'
     | '/settings/suspension-reasons'
     | '/shifts/approvals'
@@ -2099,6 +2111,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsGeneralRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/settings/organization': {
+      id: '/settings/organization'
+      path: '/organization'
+      fullPath: '/settings/organization'
+      preLoaderRoute: typeof SettingsOrganizationRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/settings/sponsors': {
       id: '/settings/sponsors'
       path: '/sponsors'
@@ -2350,6 +2369,7 @@ interface SettingsRouteChildren {
   SettingsCompanyRoute: typeof SettingsCompanyRoute
   SettingsCompanyDocumentsRoute: typeof SettingsCompanyDocumentsRoute
   SettingsGeneralRoute: typeof SettingsGeneralRoute
+  SettingsOrganizationRoute: typeof SettingsOrganizationRoute
   SettingsSponsorsRoute: typeof SettingsSponsorsRoute
   SettingsSuspensionReasonsRoute: typeof SettingsSuspensionReasonsRoute
 }
@@ -2363,6 +2383,7 @@ const SettingsRouteChildren: SettingsRouteChildren = {
   SettingsCompanyRoute: SettingsCompanyRoute,
   SettingsCompanyDocumentsRoute: SettingsCompanyDocumentsRoute,
   SettingsGeneralRoute: SettingsGeneralRoute,
+  SettingsOrganizationRoute: SettingsOrganizationRoute,
   SettingsSponsorsRoute: SettingsSponsorsRoute,
   SettingsSuspensionReasonsRoute: SettingsSuspensionReasonsRoute,
 }

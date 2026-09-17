@@ -502,6 +502,12 @@ export const SCREENS = Object.freeze([
     "status": "legacy"
   },
   {
+    "path": "/settings/organization",
+    "title": "الهيكل التنظيمي وإدارة الأقسام",
+    "section": "إعدادات النظام",
+    "status": "phase1"
+  },
+  {
     "path": "/settings/sponsors",
     "title": "تهيئة بيانات الكفلاء والمنشآت التابعة",
     "section": "إعدادات النظام",
