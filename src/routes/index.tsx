@@ -335,103 +335,7 @@ function PeopleInsightStudioPage() {
         }`}
         dir="rtl"
       >
-        {/* Executive Header Banner */}
-        <header className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-[0_1px_3px_0_rgba(60,64,67,0.08),0_4px_12px_0_rgba(60,64,67,0.06)] dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Title & Metadata */}
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span className="grid size-11 place-items-center rounded-2xl bg-[#0b57d0] text-white shadow-xs">
-                  <MaterialIcon name="monitoring" size={24} filled />
-                </span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                      People Insight Studio
-                    </h1>
-                    <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-black text-[#0b57d0] dark:bg-blue-950 dark:text-blue-300">
-                      لوحة الموارد البشرية التنفيذية
-                    </span>
-                    {isDesignMode && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-black text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                        <MaterialIcon name="tune" size={13} />
-                        <span>وضع التصميم مفعل</span>
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    متابعة لحظية للقوى العاملة والحضور وسير العمل والمؤشرات الرئيسية.
-                  </p>
-                </div>
-              </div>
 
-              {/* Status Bar */}
-              <div className="flex flex-wrap items-center gap-4 text-xs font-bold pt-1 text-slate-500 dark:text-slate-400">
-                <span className="flex items-center gap-1.5 text-[#137333] dark:text-emerald-400">
-                  <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span>بيانات حية ومباشرة (Live)</span>
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1 font-mono">
-                  <MaterialIcon name="update" size={14} />
-                  <span>آخر مزامنة: {lastSyncTime}</span>
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <MaterialIcon name="account_circle" size={14} />
-                  <span>{currentUser.email}</span>
-                  <span className="text-slate-400 font-normal">({currentUser.role})</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Clean Minimal Executive Actions */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <DashboardSwitcher
-                dashboards={dashboards}
-                activeDashboardId={activeDashboardId}
-                onSelectDashboard={handleSelectDashboard}
-                onCreateDashboard={handleCreateDashboard}
-                onResetDashboards={handleResetDashboards}
-              />
-
-              <button
-                type="button"
-                onClick={() => setIsStudioOpen(!isStudioOpen)}
-                className="flex items-center gap-1.5 rounded-2xl bg-[#0b57d0] px-3.5 py-2 text-xs font-black text-white hover:bg-[#0842a0] transition shadow-xs cursor-pointer"
-                title={isStudioOpen ? "إغلاق مصمم اللوحة" : "فتح مصمم اللوحة"}
-              >
-                <MaterialIcon name="space_dashboard" size={16} />
-                <span>{isStudioOpen ? "إغلاق المصمم" : "مصمم اللوحة"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportDashboard}
-                className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
-                title="تصدير بيانات اللوحة إلى Excel"
-              >
-                <MaterialIcon name="download" size={16} />
-                <span>تصدير</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleRefresh}
-                disabled={employeesQuery.isFetching}
-                className="flex items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-extrabold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 cursor-pointer"
-                title="تحديث البيانات"
-              >
-                <MaterialIcon
-                  name="refresh"
-                  size={16}
-                  className={employeesQuery.isFetching ? "animate-spin" : ""}
-                />
-                <span>تحديث</span>
-              </button>
-            </div>
-          </div>
-        </header>
 
         {/* Global Filter Bar */}
         <GlobalFilterBar
@@ -640,6 +544,14 @@ function PeopleInsightStudioPage() {
           onThemeModeChange={setThemeMode}
           isDesignMode={isDesignMode}
           onDesignModeChange={setIsDesignMode}
+          dashboards={dashboards}
+          activeDashboardId={activeDashboardId}
+          onSelectDashboard={handleSelectDashboard}
+          onCreateDashboard={handleCreateDashboard}
+          onResetDashboards={handleResetDashboards}
+          onExportDashboard={handleExportDashboard}
+          onRefresh={handleRefresh}
+          isFetching={employeesQuery.isFetching}
         />
       </div>
     </AppShell>

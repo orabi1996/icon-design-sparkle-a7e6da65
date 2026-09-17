@@ -13,6 +13,14 @@ export interface DashboardStudioDrawerProps {
   onThemeModeChange: (mode: "light" | "dark" | "system") => void;
   isDesignMode: boolean;
   onDesignModeChange: (mode: boolean) => void;
+  dashboards?: DashboardLayout[];
+  activeDashboardId?: string;
+  onSelectDashboard?: (id: string) => void;
+  onCreateDashboard?: (newBoard: DashboardLayout) => void;
+  onResetDashboards?: () => void;
+  onExportDashboard?: () => void;
+  onRefresh?: () => void;
+  isFetching?: boolean;
 }
 
 export type StudioTab = "elements" | "layers" | "settings" | "appearance";
@@ -118,6 +126,14 @@ export function DashboardStudioDrawer({
   onThemeModeChange,
   isDesignMode,
   onDesignModeChange,
+  dashboards,
+  activeDashboardId,
+  onSelectDashboard,
+  onCreateDashboard,
+  onResetDashboards,
+  onExportDashboard,
+  onRefresh,
+  isFetching,
 }: DashboardStudioDrawerProps) {
   const [activeTab, setActiveTab] = useState<StudioTab>("elements");
   const [searchQuery, setSearchQuery] = useState("");
@@ -439,6 +455,37 @@ export function DashboardStudioDrawer({
               />
               <span className="text-[10px] tracking-tight mt-1 font-medium">الإعدادات</span>
             </button>
+
+            {/* Quick Action: Refresh */}
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={isFetching}
+                title="تحديث بيانات اللوحة"
+                className="group relative flex flex-col items-center justify-center w-full py-2 rounded-xl transition-all hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 disabled:opacity-40 cursor-pointer"
+              >
+                <MaterialIcon
+                  name="refresh"
+                  size={20}
+                  className={isFetching ? "animate-spin text-blue-400" : ""}
+                />
+                <span className="text-[10px] tracking-tight mt-0.5 font-medium">تحديث</span>
+              </button>
+            )}
+
+            {/* Quick Action: Export */}
+            {onExportDashboard && (
+              <button
+                type="button"
+                onClick={onExportDashboard}
+                title="تصدير إلى Excel"
+                className="group relative flex flex-col items-center justify-center w-full py-2 rounded-xl transition-all hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 cursor-pointer"
+              >
+                <MaterialIcon name="download" size={20} />
+                <span className="text-[10px] tracking-tight mt-0.5 font-medium">تصدير</span>
+              </button>
+            )}
           </div>
 
           {/* Bottom Item: Tab: المظهر (Appearance) */}
@@ -731,6 +778,49 @@ export function DashboardStudioDrawer({
                     <span className="text-[11px] font-extrabold text-[#0b57d0] dark:text-blue-400 block">
                       إعدادات لوحة المعلومات
                     </span>
+
+                    {/* Dashboard Switcher & Create */}
+                    {dashboards && onSelectDashboard && (
+                      <div className="space-y-1.5 pb-2 border-b border-slate-200/80 dark:border-slate-700/80">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                          اللوحة الحالية
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={activeDashboardId || dashboard.id}
+                            onChange={(e) => onSelectDashboard(e.target.value)}
+                            className="h-9 flex-1 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+                          >
+                            {dashboards.map((d) => (
+                              <option key={d.id} value={d.id}>
+                                {d.name} {d.isDefault ? "(افتراضية)" : ""}
+                              </option>
+                            ))}
+                          </select>
+                          {onCreateDashboard && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const name = prompt("أدخل اسم لوحة المعلومات الجديدة:")?.trim();
+                                if (name) {
+                                  onCreateDashboard({
+                                    id: `dash-${Date.now()}`,
+                                    name,
+                                    widgets: [...dashboard.widgets],
+                                    createdAt: new Date().toISOString(),
+                                    updatedAt: new Date().toISOString(),
+                                  });
+                                }
+                              }}
+                              className="grid size-9 place-items-center rounded-xl bg-blue-50 text-[#0b57d0] hover:bg-[#0b57d0] hover:text-white dark:bg-blue-950 dark:text-blue-300 transition cursor-pointer shrink-0"
+                              title="إنشاء لوحة جديدة"
+                            >
+                              <MaterialIcon name="add" size={18} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Dashboard Name */}
                     <div>
