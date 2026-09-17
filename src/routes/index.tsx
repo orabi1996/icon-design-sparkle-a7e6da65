@@ -526,6 +526,8 @@ function PeopleInsightStudioPage() {
                     ? "col-span-12 sm:col-span-6 lg:col-span-3"
                     : "col-span-12";
 
+                const WidgetComponent = reg.component;
+
                 return (
                   <div
                     key={widget.id}
@@ -603,19 +605,19 @@ function PeopleInsightStudioPage() {
                     )}
 
                     {/* Actual Widget Component */}
-                    {reg.component({
-                      widget,
-                      filters,
-                      employees: filteredEmployees,
-                      allEmployees,
-                      attendance: rawAttendance,
-                      leaveRequests: rawLeaveRequests,
-                      requests: rawRequests,
-                      loans: rawLoans,
-                      payrollRuns: rawPayrollRuns,
-                      isEditing: isDesignMode,
-                      onDrillDown: (d) => setDrillDownData({ ...d, isOpen: true }),
-                    })}
+                    <WidgetComponent
+                      widget={widget}
+                      filters={filters}
+                      employees={filteredEmployees}
+                      allEmployees={allEmployees}
+                      attendance={rawAttendance}
+                      leaveRequests={rawLeaveRequests}
+                      requests={rawRequests}
+                      loans={rawLoans}
+                      payrollRuns={rawPayrollRuns}
+                      isEditing={isDesignMode}
+                      onDrillDown={(d) => setDrillDownData({ ...d, isOpen: true })}
+                    />
                   </div>
                 );
               })}
