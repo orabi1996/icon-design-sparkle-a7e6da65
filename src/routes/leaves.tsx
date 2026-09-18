@@ -25,12 +25,39 @@ export const Route = createFileRoute("/leaves")({
 function Leaves() {
   const employees = useRows("employees", { orderBy: "emp_no", ascending: true }).data ?? [];
   const names = employees.map((e) => String(e["full_name"]));
+  const { data: allLeaves = [] } = useRows("leave_requests", { orderBy: "id" });
+
+  const totalCount = allLeaves.length;
+  const pendingCount = allLeaves.filter((r) => String(r["status"] || "").includes("انتظار")).length;
+  const approvedCount = allLeaves.filter((r) => String(r["status"] || "").includes("معتمد")).length;
+  const rejectedCount = allLeaves.filter((r) => String(r["status"] || "").includes("مرفوض")).length;
 
   return (
     <AppShell>
       <div className="mt-4">
         <Breadcrumbs trail={["شئون الموظفين", "طلبات الأجازات"]} />
-        <PageBanner icon="beach_access" title="طلبات الأجازات" subtitle="إضافة ومتابعة واعتماد أجازات الموظفين" />
+        <PageBanner icon="beach_access" title="طلبات الأجازات" subtitle="إضافة ومتابعة واعتماد أجازات الموظفين وفق سياسات رصيد الأستاذ وحساب أيام العمل" />
+
+        {/* Live Leave Status KPI Cards */}
+        <div className="my-4 grid grid-cols-2 gap-3 sm:grid-cols-4" dir="rtl">
+          <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-3 shadow-xs dark:border-blue-900/40 dark:bg-blue-950/20">
+            <div className="text-[11px] font-bold text-slate-500">إجمالي طلبات الإجازات</div>
+            <div className="mt-1 font-mono text-lg font-extrabold text-blue-700 dark:text-blue-300">{totalCount} طلب</div>
+          </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 shadow-xs dark:border-amber-900/40 dark:bg-amber-950/20">
+            <div className="text-[11px] font-bold text-slate-500">بانتظار دورة الاعتماد</div>
+            <div className="mt-1 font-mono text-lg font-extrabold text-amber-700 dark:text-amber-300">{pendingCount} معلق</div>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 shadow-xs dark:border-emerald-900/40 dark:bg-emerald-950/20">
+            <div className="text-[11px] font-bold text-slate-500">إجازات معتمدة ومخصومة</div>
+            <div className="mt-1 font-mono text-lg font-extrabold text-emerald-700 dark:text-emerald-300">{approvedCount} معتمد</div>
+          </div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 shadow-xs dark:border-rose-900/40 dark:bg-rose-950/20">
+            <div className="text-[11px] font-bold text-slate-500">إجازات مرفوضة / ملغاة</div>
+            <div className="mt-1 font-mono text-lg font-extrabold text-rose-700 dark:text-rose-300">{rejectedCount} مرفوض</div>
+          </div>
+        </div>
+
         <CrudTable
           table="leave_requests"
           title="طلبات الأجازات"
