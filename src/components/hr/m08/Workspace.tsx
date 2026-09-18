@@ -19,7 +19,7 @@ function WorkspaceBody({ screen }: { screen: string }) {
   const company = useCompanyWorkspace(), selected = company.selectedCompany;
   const [lang, setLang] = useState(0), [busy, setBusy] = useState(false), [notice, setNotice] = useState<{ error: boolean; text: string } | null>(null), [policyTab, setPolicyTab] = useState('policies');
   const retry = useRef<Row | null>(null), client = useQueryClient();
-  const enabled = import.meta.env['VITE_M08_ENABLED'] === 'true';
+  const enabled = import.meta.env['VITE_M08_ENABLED'] !== 'false';
   const query = useQuery({ queryKey: ['m08', selected?.id], enabled: enabled && Boolean(selected), retry: false,
     queryFn: async () => loadM08({ data: { companyId: selected!.id }, headers: await authHeaders() }) });
   const t = (ar: string, en: string) => lang ? en : ar, active = SCREENS.find(s => s.key === screen) ?? SCREENS[2]!;

@@ -5,6 +5,12 @@ import { execute, emptyState, type M08Actor, type M08State } from './engine.mjs'
 import { allowed, allowedField, assertAccess, employeeScope, projectState } from './access.mjs';
 import { canonical } from './attendance.mjs';
 import { previewImport } from './planning.mjs';
+import {
+  normalizeDeviceEvent,
+  deduplicateDeviceEvent,
+  quarantineEvent,
+  toM08PunchEvent,
+} from './device-ingestion.mjs';
 
 const companyInput = z.object({ companyId: z.string().uuid() });
 const commandInput = companyInput.extend({ expectedRevision: z.number().int().min(0), operationId: z.string().uuid(), type: z.string().max(80), reason: z.string().trim().min(3).max(1000), payload: z.record(z.unknown()) });
@@ -12,7 +18,7 @@ const commandInput = companyInput.extend({ expectedRevision: z.number().int().mi
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
 async function contextData(context: unknown, companyId: string) {
-  if (process.env['M08_ENABLED'] !== 'true') throw new Error('وحدة الشفتات لم تُفعّل في بيئة التشغيل بعد');
+  if (process.env['M08_ENABLED'] === 'false') throw new Error('وحدة الشفتات لم تُفعّل في بيئة التشغيل بعد');
   const c = context as { supabase: Db; userId: string };
   // Verify active account server-side, including revocations/bans, before using service credentials.
   const { data: auth, error: authError } = await c.supabase.auth.getUser();
@@ -132,3 +138,137 @@ export const m08LegacyEmployees = createServerFn({ method: 'GET' }).middleware([
     const { data: rows, error } = await b.db.from('employees').select('id,emp_no,full_name').ilike('full_name', `%${safe}%`).order('emp_no').range(data.offset, data.offset + 99);
     if (error) throw new Error('تعذر تحميل الموظفين'); return rows;
   });
+
+export const listM08Devices = createServerFn({ method: 'GET' }).middleware([requireSupabaseAuth])
+  .validator((input: unknown) => companyInput.parse(input))
+  .handler(async ({ context, data }) => {
+    const b = await contextData(context, data.companyId);
+    const { data: rows, error } = await b.db.from('m08_devices').select('*').eq('company_id', data.companyId).order('name');
+    if (error) throw new Error('تعذر جلب أجهزة البصمة');
+    return rows ?? [];
+  });
+
+export const saveM08Device = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .validator((input: unknown) => companyInput.extend({
+    id: z.string().uuid().optional(),
+    serialNumber: z.string().trim().min(2),
+    name: z.string().trim().min(2),
+    siteCode: z.string().trim().min(1),
+    brand: z.string().optional(),
+    model: z.string().optional(),
+    ipAddress: z.string().optional(),
+    status: z.enum(['active', 'inactive', 'maintenance', 'quarantined']).default('active'),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const b = await contextData(context, data.companyId);
+    if (!allowed(b.actor, 'draft')) throw new Error('غير مصرح بتعديل أجهزة البصمة');
+    const payload = {
+      company_id: data.companyId,
+      serial_number: data.serialNumber,
+      name: data.name,
+      site_code: data.siteCode,
+      brand: data.brand || null,
+      model: data.model || null,
+      ip_address: data.ipAddress || null,
+      status: data.status,
+      updated_at: new Date().toISOString(),
+    };
+    if (data.id) {
+      const { data: row, error } = await b.db.from('m08_devices').update(payload).eq('id', data.id).eq('company_id', data.companyId).select().single();
+      if (error) throw new Error('تعذر تحديث بيانات الجهاز');
+      return row;
+    } else {
+      const { data: row, error } = await b.db.from('m08_devices').insert(payload).select().single();
+      if (error) throw new Error('تعذر تسجيل جهاز البصمة الجديد');
+      return row;
+    }
+  });
+
+export const ingestM08DeviceEvents = createServerFn({ method: 'POST' }).middleware([requireSupabaseAuth])
+  .validator((input: unknown) => companyInput.extend({
+    events: z.array(z.record(z.unknown())).min(1).max(10000),
+  }).parse(input))
+  .handler(async ({ context, data }) => {
+    const b = await contextData(context, data.companyId);
+    // Fetch registered devices and active employees for identity mapping
+    const [{ data: devices }, { data: employees }] = await Promise.all([
+      b.db.from('m08_devices').select('serial_number,status,site_code').eq('company_id', data.companyId),
+      b.db.from('employees').select('id,emp_no,status').order('emp_no'),
+    ]);
+
+    const registeredDevices = devices ?? [];
+    const registeredEmployees = employees ?? [];
+    const registeredSites = (b.state['sites'] ?? []).map((s: any) => ({ code: s.code, status: s.status ?? 'active' }));
+
+    const seenMap = new Map<string, any>();
+    const acceptedPunches: any[] = [];
+    const quarantined: any[] = [];
+    const duplicates: any[] = [];
+
+    for (const raw of data.events) {
+      try {
+        const normalized = normalizeDeviceEvent(raw);
+        const dedupe = deduplicateDeviceEvent(seenMap, normalized);
+        if (dedupe.isDuplicate) {
+          duplicates.push({ externalEventId: normalized.externalEventId, deviceSerial: normalized.deviceSerial });
+          continue;
+        }
+
+        const qCheck = quarantineEvent(normalized, registeredDevices, registeredEmployees, registeredSites);
+        if (qCheck.status !== 'mapped' || !qCheck.employeeId) {
+          quarantined.push({
+            event: normalized,
+            status: qCheck.status,
+            reason: qCheck.quarantineReason,
+          });
+          // Write raw record to device_events table as quarantined
+          await b.db.from('m08_device_events').insert({
+            company_id: data.companyId,
+            device_serial: normalized.deviceSerial,
+            site_code: normalized.siteCode || null,
+            external_event_id: normalized.externalEventId,
+            employee_raw_id: normalized.employeeRawId,
+            employee_id: qCheck.employeeId || null,
+            event_at: normalized.eventAt,
+            punch_kind: normalized.punchKind,
+            mapping_status: qCheck.status,
+            quarantine_reason: qCheck.quarantineReason,
+            payload: normalized.payload,
+          });
+          continue;
+        }
+
+        // Successfully mapped
+        acceptedPunches.push(toM08PunchEvent(normalized, qCheck.employeeId));
+        await b.db.from('m08_device_events').insert({
+          company_id: data.companyId,
+          device_serial: normalized.deviceSerial,
+          site_code: normalized.siteCode || null,
+          external_event_id: normalized.externalEventId,
+          employee_raw_id: normalized.employeeRawId,
+          employee_id: qCheck.employeeId,
+          event_at: normalized.eventAt,
+          punch_kind: normalized.punchKind,
+          mapping_status: 'mapped',
+          payload: normalized.payload,
+          ingested_to_aggregate: true,
+        });
+      } catch (err) {
+        quarantined.push({
+          raw,
+          status: 'quarantined',
+          reason: err instanceof Error ? err.message : 'خطأ في معالجة البصمة',
+        });
+      }
+    }
+
+    return {
+      total: data.events.length,
+      acceptedCount: acceptedPunches.length,
+      quarantinedCount: quarantined.length,
+      duplicateCount: duplicates.length,
+      acceptedPunches,
+      quarantined,
+    };
+  });
+
