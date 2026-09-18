@@ -7,6 +7,8 @@ import { Breadcrumbs, Btn, Card, Field, PageBanner } from "@/components/hr/ui";
 import { CrudTable } from "@/components/hr/CrudTable";
 import { money, useRows, useSaveRow, type Row } from "@/lib/hr-db";
 import { notifyWorkflow } from "@/lib/email/dispatcher";
+import { supabase } from "@/integrations/supabase/client";
+import { calculateLoanLedgerBalance, roundCurrency } from "@/lib/loans-eos-core.mjs";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
@@ -404,23 +406,56 @@ function RepayTab() {
   const [busy, setBusy] = useState(false);
 
   const payOne = async (r: Row) => {
+    const loanId = String(r["id"]);
     const approved = Number(r["approved_amount"] || r["amount"] || 0);
-    const paid = Number(r["paid_amount"] ?? 0);
     const inst = Number(r["monthly_amount"] ?? 0);
-    const next = Math.min(approved, paid + inst);
+    if (inst <= 0) { toast.error("قيمة القسط الشهري غير محددة"); return; }
+
+    // Fetch existing transactions from ledger to get authoritative balance
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const anyDb = supabase as any;
+    const { data: txs = [] } = await anyDb
+      .from("loan_transactions")
+      .select("*")
+      .eq("loan_id", loanId);
+
+    const balance = calculateLoanLedgerBalance((txs as Record<string, unknown>[]) || [], approved);
+    const payAmt = Math.min(inst, balance.outstandingBalance);
+    if (payAmt <= 0) { toast.error("السلفة مسددة بالكامل بالفعل"); return; }
+
+    const newBal = roundCurrency(balance.outstandingBalance - payAmt);
+    const idempotencyKey = `manual:installment:${loanId}:${Date.now()}`;
+
+    // Append to immutable ledger
+    await anyDb.from("loan_transactions").insert({
+      loan_id: loanId,
+      employee_id: r["employee_id"],
+      transaction_type: "installment",
+      direction: "credit",
+      amount: payAmt,
+      balance_after: newBal,
+      idempotency_key: idempotencyKey,
+      notes: "سداد قسط يدوي من شاشة السلف",
+    });
+
     await save.mutateAsync({
-      id: r["id"],
-      paid_amount: next,
-      status: next >= approved && approved > 0 ? "مسددة" : "قيد السداد",
+      id: loanId,
+      paid_amount: roundCurrency(approved - newBal),
+      status: newBal <= 0 ? "مسددة" : "قيد السداد",
     });
   };
 
   const payAll = async () => {
     if (loans.length === 0) { toast.error("لا توجد سلف قيد السداد"); return; }
     setBusy(true);
-    for (const r of loans) await payOne(r);
-    setBusy(false);
-    toast.success(`تم تسجيل سداد ${loans.length} قسط`);
+    try {
+      for (const r of loans) await payOne(r);
+      toast.success(`تم تسجيل سداد ${loans.length} قسط بالدفتر المالي`);
+    } catch (e) {
+      toast.error(`حدث خطأ أثناء السداد: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

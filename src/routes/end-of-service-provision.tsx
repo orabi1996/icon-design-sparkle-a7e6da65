@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRows, type Row } from "@/lib/hr-db";
 import { supabase } from "@/integrations/supabase/client";
+import { computeEosGratuity, getStatutoryEosConfig, calculateExactServiceDuration } from "@/lib/loans-eos-core.mjs";
 
 export const Route = createFileRoute("/end-of-service-provision")({
   head: () => ({
@@ -185,10 +186,17 @@ function yearsOfService(hireDate: unknown, calculationDate: string) {
 }
 
 function calculateProvision(employee: Row, calculationDate: string) {
-  const years = yearsOfService(employee["hire_date"], calculationDate);
+  const hireDate = String(employee["hire_date"] || "");
+  if (!hireDate || !calculationDate) return 0;
+  const duration = calculateExactServiceDuration(hireDate, calculationDate);
   const salary = Number(employee["basic_salary"] ?? 0) + Number(employee["allowances"] ?? 0);
-  const serviceFactor = Math.min(years, 5) * 0.5 + Math.max(years - 5, 0);
-  return Math.round(salary * serviceFactor * 100) / 100;
+  const config = getStatutoryEosConfig("SA");
+  const res = computeEosGratuity(config, {
+    decimalYears: duration.decimalYears,
+    wageBase: salary,
+    terminationReason: "contract_end",
+  });
+  return res.finalGratuity;
 }
 
 function FieldLabel({ label, children }: { label: string; children: ReactNode }) {

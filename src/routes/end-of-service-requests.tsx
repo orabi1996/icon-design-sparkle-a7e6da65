@@ -6,6 +6,7 @@ import { AppShell } from "@/components/hr/AppShell";
 import { Breadcrumbs, Btn, Card, Chip, PageBanner } from "@/components/hr/ui";
 import { useRows, useSaveRow, type Row } from "@/lib/hr-db";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateExactServiceDuration } from "@/lib/loans-eos-core.mjs";
 
 export const Route = createFileRoute("/end-of-service-requests")({
   head: () => ({
@@ -299,12 +300,10 @@ function EndOfServiceRequestsPage() {
   const selectedEmployee = employees.find((employee) => employee["id"] === form.employeeId);
 
   const serviceYears = selectedEmployee?.["hire_date"]
-    ? Math.max(
-        0,
-        ((form.serviceEndDate ? new Date(form.serviceEndDate).getTime() : Date.now()) -
-          new Date(String(selectedEmployee["hire_date"])).getTime()) /
-          (365.25 * 86_400_000),
-      )
+    ? calculateExactServiceDuration(
+        String(selectedEmployee["hire_date"]),
+        form.serviceEndDate || new Date().toISOString().slice(0, 10)
+      ).decimalYears
     : 0;
 
   const filteredRows = useMemo(() => {
