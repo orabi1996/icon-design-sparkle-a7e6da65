@@ -4,6 +4,12 @@ import * as XLSX from "xlsx";
 import { AppShell } from "@/components/hr/AppShell";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useRows, type Row } from "@/lib/hr-db";
+import {
+  computeEmployeePayroll,
+  validateWpsRecord,
+  generateWpsBankFile,
+  getDefaultStatutoryConfig,
+} from "@/lib/payroll-core.mjs";
 
 export const Route = createFileRoute("/payroll/bank-file")({
   head: () => ({ meta: [{ title: "توليد ملف البنك وحماية الأجور (WPS) | رواتب الموظفين" }] }),
@@ -35,43 +41,66 @@ function BankFileGeneratorPage() {
   const { data: employees = [], isLoading } = useRows("employees", { orderBy: "emp_no", ascending: true });
 
   const [selectedBank, setSelectedBank] = useState("RJHI");
-  const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedYear, setSelectedYear] = useState("2026");
   const [selectedMonth, setSelectedMonth] = useState("05");
   const [molEstId, setMolEstId] = useState("7001984251"); // وزارة الموارد البشرية رقم المنشأة
   const [payerIban, setPayerIban] = useState("SA4480000123456789012345");
-  const [paymentDate, setPaymentDate] = useState("2025-05-27");
+  const [paymentDate, setPaymentDate] = useState("2026-05-27");
   const [searchQuery, setSearchQuery] = useState("");
+  const [generatedHash, setGeneratedHash] = useState<string | null>(null);
 
-  // Compute WPS records
+  // Compute deterministic WPS payroll records using domain core
   const payrollRecords = useMemo(() => {
-    return employees.map((emp, idx) => {
-      const basic = Number(emp["basic_salary"] || 7000);
-      const housing = Math.round(basic * 0.25);
-      const transport = Math.round(basic * 0.1);
-      const total = basic + housing + transport;
-      const isSaudi = emp["nationality"] === "سعودي";
-      const gosi = isSaudi ? Math.round((basic + housing) * 0.0975) : 0;
-      const loan = idx % 4 === 0 ? 500 : 0;
-      const net = total - gosi - loan;
+    const statutoryConfig = getDefaultStatutoryConfig();
 
+    return employees.map((emp, idx) => {
+      const isSaudi = emp["nationality"] === "سعودي" || emp["is_saudi"] === true;
       const bankInfo = BANKS[idx % BANKS.length]!;
-      const iban = emp["iban"] || `SA${(idx + 10).toString().padStart(2, "0")}${bankInfo.code}0000${(1000000000 + idx * 999)}`;
-      const nationalId = emp["national_id"] || (isSaudi ? `10${(idx + 10000000)}` : `20${(idx + 10000000)}`);
+      const nationalId = String(
+        emp["national_id"] || (isSaudi ? `10${(idx + 10000000)}` : `20${(idx + 10000000)}`)
+      );
+      const rawIban = String(
+        emp["iban"] || `SA${(idx + 10).toString().padStart(2, "0")}${bankInfo.code}0000${(1000000000 + idx * 999)}`
+      ).trim();
+
+      const calculated = computeEmployeePayroll(
+        {
+          id: emp["id"],
+          emp_no: emp["emp_no"] || String(idx + 1),
+          full_name: emp["full_name"] || "—",
+          nationality: emp["nationality"],
+          is_saudi: isSaudi,
+          basic_salary: Number(emp["basic_salary"] || 7000),
+          housing_allowance: Number(emp["housing_allowance"] || Math.round(Number(emp["basic_salary"] || 7000) * 0.25)),
+          transport_allowance: Number(emp["transport_allowance"] || Math.round(Number(emp["basic_salary"] || 7000) * 0.1)),
+          bank_code: bankInfo.code,
+          iban: rawIban,
+        },
+        [],
+        statutoryConfig
+      );
+
+      const wpsCheck = validateWpsRecord({
+        iban: rawIban,
+        national_id: nationalId,
+        net_salary: calculated.netSalary,
+      });
 
       return {
         id: emp["id"],
-        emp_no: emp["emp_no"] || String(idx + 1),
-        full_name: emp["full_name"] || "—",
+        emp_no: calculated.empNo,
+        full_name: calculated.employeeName,
         national_id: nationalId,
         bank_name: bankInfo.name,
         bank_code: bankInfo.code,
-        iban,
-        basic_salary: basic,
-        housing_allowance: housing,
-        other_allowances: transport,
-        deductions: gosi + loan,
-        net_salary: net,
-        status: iban.length === 24 ? "آيبان معتمد وصحيح" : "تحقق من الآيبان",
+        iban: rawIban,
+        basic_salary: calculated.basicSalary,
+        housing_allowance: calculated.housingAllowance,
+        other_allowances: calculated.otherAllowances + calculated.transportAllowance,
+        deductions: calculated.totalDeductions,
+        net_salary: calculated.netSalary,
+        isValid: wpsCheck.valid,
+        status: wpsCheck.valid ? "معتمد ومطابق للمعايير" : wpsCheck.errors[0] || "بيانات غير مكتملة",
       };
     });
   }, [employees]);
@@ -103,25 +132,27 @@ function BankFileGeneratorPage() {
     );
   }, [filtered]);
 
-  /* ─── Export Official WPS SIF (.txt) File ─── */
+  /* ─── Export Official SAMA WPS (.txt) File with SHA-256 ─── */
   const downloadWpsSifFile = () => {
-    // Header record (SCR): SCR,Payer Bank ID,Payer Acc/IBAN,File Creation Date,File Creation Time,Total Amount,Total Count,Currency,MOL Est ID
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, "");
-    const time = "0930";
-    const header = `SCR,${selectedBank},${payerIban},${today},${time},${totals.net.toFixed(2)},${totals.count},SAR,${molEstId}`;
+    const batchReference = `BATCH${selectedYear}${selectedMonth}${Date.now().toString().slice(-4)}`;
+    const output = generateWpsBankFile(
+      {
+        batchReference,
+        bankCode: selectedBank,
+        payerIban: payerIban.trim(),
+        molEstId: molEstId.trim(),
+        valueDate: paymentDate,
+      },
+      filtered
+    );
 
-    // Detail record (DCR): DCR,Reference Number,Emp ID,Emp Name,Emp Bank ID,Emp IBAN,Total Salary,Basic,Housing,Other,Deductions,Remarks
-    const details = filtered.map((r, i) => {
-      const ref = `SAL${selectedYear}${selectedMonth}${(i + 1).toString().padStart(4, "0")}`;
-      return `DCR,${ref},${r.national_id},"${r.full_name}",${r.bank_code},${r.iban},${r.net_salary.toFixed(2)},${r.basic_salary.toFixed(2)},${r.housing_allowance.toFixed(2)},${r.other_allowances.toFixed(2)},${r.deductions.toFixed(2)},"SALARY_${selectedMonth}_${selectedYear}"`;
-    });
+    setGeneratedHash(output.fileHash);
 
-    const fileContent = [header, ...details].join("\r\n");
-    const blob = new Blob(["\uFEFF" + fileContent], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob(["\uFEFF" + output.fileContent], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `WPS_SIF_${molEstId}_${selectedYear}${selectedMonth}_${selectedBank}.txt`;
+    a.download = output.fileName;
     a.click();
   };
 
@@ -269,6 +300,20 @@ function BankFileGeneratorPage() {
             </button>
           </div>
         </div>
+        {generatedHash && (
+          <div className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MaterialIcon name="verified" size={18} className="text-emerald-700" />
+              <span>
+                <strong>توقيع التحقق الرقمي المعتمد للملف (SHA-256):</strong>{" "}
+                <span className="font-mono text-[11px] text-emerald-800">{generatedHash}</span>
+              </span>
+            </div>
+            <span className="text-[10px] font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded">
+              تم التوليد بنجاح
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Toolbar Search */}
@@ -338,9 +383,15 @@ function BankFileGeneratorPage() {
                     {r.net_salary.toLocaleString()} ريال
                   </td>
                   <td className="px-2.5 py-1.5 text-center">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 flex items-center justify-center gap-1">
-                      <MaterialIcon name="check_circle" size={12} />
-                      معتمد
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center justify-center gap-1 ${
+                        r.isValid
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-amber-100 text-amber-800"
+                      }`}
+                    >
+                      <MaterialIcon name={r.isValid ? "check_circle" : "warning"} size={12} />
+                      {r.status}
                     </span>
                   </td>
                 </tr>
