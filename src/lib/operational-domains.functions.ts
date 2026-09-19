@@ -438,7 +438,7 @@ export const getSecureDocumentDownloadUrlFn = createServerFn({ method: "POST" })
     // 4. Audit access to sensitive files
     if (isSensitive) {
       await logSecurityAudit(db, {
-        eventType: "sensitive_config_changed",
+        eventType: "data_exported",
         status: "success",
         userId: user.userId,
         actorEmail: user.email,

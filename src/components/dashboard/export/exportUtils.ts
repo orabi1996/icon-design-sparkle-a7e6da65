@@ -7,6 +7,18 @@ export interface ExportColumn {
   format?: ((value: any) => string | number) | undefined;
 }
 
+function sanitizeValue(val: any): any {
+  if (val === null || val === undefined) return "—";
+  if (typeof val === "string") {
+    // CSV / Excel Formula Injection Protection (neutralize =, +, -, @, etc.)
+    if (/^\s*[=+\-@\t\r\n]/.test(val)) {
+      return `'${val}`;
+    }
+    return val;
+  }
+  return val;
+}
+
 /**
  * Export array of objects to Excel (.xlsx) file
  */
@@ -29,12 +41,19 @@ export function exportToExcel<T extends Record<string, any>>(
         const row: Record<string, any> = {};
         columns.forEach((col) => {
           const val = item[col.key];
-          row[col.header] = col.format ? col.format(val) : val ?? "—";
+          const formatted = col.format ? col.format(val) : val;
+          row[col.header] = sanitizeValue(formatted);
         });
         return row;
       });
     } else {
-      rows = data;
+      rows = data.map((item) => {
+        const sanitizedItem: Record<string, any> = {};
+        for (const [k, v] of Object.entries(item)) {
+          sanitizedItem[k] = sanitizeValue(v);
+        }
+        return sanitizedItem;
+      });
     }
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
@@ -75,12 +94,19 @@ export function exportToCsv<T extends Record<string, any>>(
         const row: Record<string, any> = {};
         columns.forEach((col) => {
           const val = item[col.key];
-          row[col.header] = col.format ? col.format(val) : val ?? "—";
+          const formatted = col.format ? col.format(val) : val;
+          row[col.header] = sanitizeValue(formatted);
         });
         return row;
       });
     } else {
-      rows = data;
+      rows = data.map((item) => {
+        const sanitizedItem: Record<string, any> = {};
+        for (const [k, v] of Object.entries(item)) {
+          sanitizedItem[k] = sanitizeValue(v);
+        }
+        return sanitizedItem;
+      });
     }
 
     const worksheet = XLSX.utils.json_to_sheet(rows);

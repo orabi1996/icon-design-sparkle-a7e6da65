@@ -76,7 +76,8 @@ export type SecurityAuditEvent = {
     | "group_changed"
     | "account_disabled"
     | "sensitive_config_changed"
-    | "unauthorized_access";
+    | "unauthorized_access"
+    | "data_exported";
   status: "success" | "failed" | "forbidden";
   userId?: string | undefined;
   actorEmail?: string | undefined;
