@@ -118,12 +118,12 @@ export function setupGlobalNumberNormalizer(): () => void {
   window.addEventListener("input", handleInput, true);
   window.addEventListener("paste", handlePaste as EventListener, true);
 
-  // 2. DISPLAY INTERCEPTION: Ensure Intl formatters default to Latin numerals
+  // 2. DISPLAY INTERCEPTION: Ensure Intl formatters default to English dates and Latin numerals
   if (typeof Intl !== "undefined") {
     const OriginalDateTimeFormat = Intl.DateTimeFormat;
-    // @ts-expect-error - Override DateTimeFormat to guarantee Latin numerals
-    Intl.DateTimeFormat = function (locales?: string | string[], options?: Intl.DateTimeFormatOptions) {
-      return new OriginalDateTimeFormat(ensureLatnLocale(locales), options);
+    // @ts-expect-error - Override DateTimeFormat to guarantee English dates
+    Intl.DateTimeFormat = function (_locales?: string | string[], options?: Intl.DateTimeFormatOptions) {
+      return new OriginalDateTimeFormat("en-US", options);
     };
     Intl.DateTimeFormat.supportedLocalesOf = OriginalDateTimeFormat.supportedLocalesOf;
 
@@ -135,7 +135,17 @@ export function setupGlobalNumberNormalizer(): () => void {
     Intl.NumberFormat.supportedLocalesOf = OriginalNumberFormat.supportedLocalesOf;
   }
 
-  // 3. NUMBER PROTOTYPE: Ensure num.toLocaleString() uses Latin numerals
+  // 3. DATE & NUMBER PROTOTYPES: Ensure Date and Number toLocale* methods use English
+  const originalDateToLocaleDateString = Date.prototype.toLocaleDateString;
+  Date.prototype.toLocaleDateString = function (_locales?: string | string[], options?: Intl.DateTimeFormatOptions) {
+    return originalDateToLocaleDateString.call(this, "en-US", options);
+  };
+
+  const originalDateToLocaleString = Date.prototype.toLocaleString;
+  Date.prototype.toLocaleString = function (_locales?: string | string[], options?: Intl.DateTimeFormatOptions) {
+    return originalDateToLocaleString.call(this, "en-US", options);
+  };
+
   const originalNumberToLocaleString = Number.prototype.toLocaleString;
   Number.prototype.toLocaleString = function (locales?: string | string[], options?: Intl.NumberFormatOptions) {
     return originalNumberToLocaleString.call(this, ensureLatnLocale(locales), options);

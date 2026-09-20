@@ -153,7 +153,7 @@ function numberAr(value: unknown) {
 
 function dateAr(value: unknown) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("ar-EG", {
+  return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
