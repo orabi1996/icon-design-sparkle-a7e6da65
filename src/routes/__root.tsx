@@ -121,8 +121,14 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { setupGlobalNumberNormalizer } from "@/lib/number-normalizer";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    return setupGlobalNumberNormalizer();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

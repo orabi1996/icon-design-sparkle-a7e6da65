@@ -124,7 +124,7 @@ function dateAr(value: unknown) {
 }
 
 function minutesAr(value: unknown) {
-  return new Intl.NumberFormat("ar-EG").format(Number(value ?? 0));
+  return new Intl.NumberFormat("en-US").format(Number(value ?? 0));
 }
 
 function FieldLabel({
@@ -480,20 +480,20 @@ function PermitsPage() {
               <StatCard
                 icon="event_repeat"
                 label="عدد الأذونات المسموح شهريًا"
-                value={new Intl.NumberFormat("ar-EG").format(Number(form.allowedPerMonth))}
+                value={new Intl.NumberFormat("en-US").format(Number(form.allowedPerMonth))}
                 hint="حسب لائحة الأذونات"
               />
               <StatCard
                 icon="fact_check"
                 label="عدد الأذونات المستخدمة هذا الشهر"
-                value={new Intl.NumberFormat("ar-EG").format(employeeMonthPermits.length)}
+                value={new Intl.NumberFormat("en-US").format(employeeMonthPermits.length)}
                 hint={selectedEmployee ? "للموظف المحدد" : "اختر موظفًا لعرض الرصيد"}
                 tone="teal"
               />
               <StatCard
                 icon="schedule"
                 label="رصيد الساعات المتبقي"
-                value={`${new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 1 }).format(hoursBalance)} ساعة`}
+                value={`${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(hoursBalance)} ساعة`}
                 hint={`من أصل ${form.hoursPerMonth || "0"} ساعات شهريًا`}
                 tone="amber"
               />
@@ -731,7 +731,7 @@ function PermitsPage() {
                     نتائج الأذونات
                   </h2>
                   <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
-                    {new Intl.NumberFormat("ar-EG").format(filteredRows.length)} سجل مطابق
+                    {new Intl.NumberFormat("en-US").format(filteredRows.length)} سجل مطابق
                   </p>
                 </div>
                 <div className="relative">
@@ -912,13 +912,13 @@ function PermitsPage() {
                           : "text-muted-foreground hover:bg-secondary"
                       }`}
                     >
-                      {new Intl.NumberFormat("ar-EG").format(size)}
+                      {new Intl.NumberFormat("en-US").format(size)}
                     </button>
                   ))}
                 </div>
                 <span className="text-muted-foreground">
-                  صفحة {new Intl.NumberFormat("ar-EG").format(page)} من{" "}
-                  {new Intl.NumberFormat("ar-EG").format(pages)}
+                  صفحة {new Intl.NumberFormat("en-US").format(page)} من{" "}
+                  {new Intl.NumberFormat("en-US").format(pages)}
                 </span>
                 <div className="ms-auto flex items-center gap-1">
                   <button
@@ -930,7 +930,7 @@ function PermitsPage() {
                     <MaterialIcon name="chevron_right" size={18} />
                   </button>
                   <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground">
-                    {new Intl.NumberFormat("ar-EG").format(page)}
+                    {new Intl.NumberFormat("en-US").format(page)}
                   </span>
                   <button
                     type="button"

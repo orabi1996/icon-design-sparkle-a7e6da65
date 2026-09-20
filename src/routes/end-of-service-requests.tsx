@@ -134,7 +134,7 @@ function dateAr(value: unknown) {
 }
 
 function numberAr(value: unknown) {
-  return new Intl.NumberFormat("ar-EG").format(Number(value ?? 0));
+  return new Intl.NumberFormat("en-US").format(Number(value ?? 0));
 }
 
 function escapeCsv(value: unknown) {
@@ -541,7 +541,7 @@ function EndOfServiceRequestsPage() {
                 label="مدة الخدمة التقريبية"
                 value={
                   selectedEmployee && form.serviceEndDate
-                    ? `${new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 1 }).format(serviceYears)} سنة`
+                    ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(serviceYears)} سنة`
                     : "تظهر بعد تحديد تاريخ النهاية"
                 }
                 tone="teal"

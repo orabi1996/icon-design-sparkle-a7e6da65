@@ -731,7 +731,7 @@ function CorrespondencePage() {
                 <FieldLabel
                   label="الرسالة"
                   required
-                  hint={`${new Intl.NumberFormat("ar-EG").format(internalForm.message.length)} حرف`}
+                  hint={`${new Intl.NumberFormat("en-US").format(internalForm.message.length)} حرف`}
                 >
                   <textarea
                     value={internalForm.message}
@@ -820,7 +820,7 @@ function CorrespondencePage() {
                 <FieldLabel
                   label="الرسالة"
                   required
-                  hint={`${new Intl.NumberFormat("ar-EG").format(stripHtml(emailForm.messageHtml).length)} حرف`}
+                  hint={`${new Intl.NumberFormat("en-US").format(stripHtml(emailForm.messageHtml).length)} حرف`}
                 >
                   <RichEditor
                     editorRef={editorRef}
@@ -932,7 +932,7 @@ function CorrespondencePage() {
                     أرشيف المراسلات
                   </h2>
                   <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">
-                    {new Intl.NumberFormat("ar-EG").format(filteredRows.length)} مراسلة مطابقة
+                    {new Intl.NumberFormat("en-US").format(filteredRows.length)} مراسلة مطابقة
                   </p>
                 </div>
                 <div className="relative">
@@ -1048,7 +1048,7 @@ function CorrespondencePage() {
                             className="border-b border-border odd:bg-secondary/35 hover:bg-accent/50"
                           >
                             <td className="whitespace-nowrap px-3 py-3 text-center text-[12px] font-black text-primary">
-                              {new Intl.NumberFormat("ar-EG").format(
+                              {new Intl.NumberFormat("en-US").format(
                                 Number(row["character_count"] ?? message.length),
                               )}
                             </td>
@@ -1130,14 +1130,14 @@ function CorrespondencePage() {
                           : "text-muted-foreground hover:bg-secondary"
                       }`}
                     >
-                      {new Intl.NumberFormat("ar-EG").format(size)}
+                      {new Intl.NumberFormat("en-US").format(size)}
                     </button>
                   ))}
                 </div>
                 <span className="text-muted-foreground">
-                  صفحة {new Intl.NumberFormat("ar-EG").format(safePage)} من{" "}
-                  {new Intl.NumberFormat("ar-EG").format(pages)} ·{" "}
-                  {new Intl.NumberFormat("ar-EG").format(filteredRows.length)} عنصر
+                  صفحة {new Intl.NumberFormat("en-US").format(safePage)} من{" "}
+                  {new Intl.NumberFormat("en-US").format(pages)} ·{" "}
+                  {new Intl.NumberFormat("en-US").format(filteredRows.length)} عنصر
                 </span>
                 <div className="ms-auto flex items-center gap-1">
                   <button
@@ -1160,7 +1160,7 @@ function CorrespondencePage() {
                             : "text-muted-foreground hover:bg-secondary"
                         }`}
                       >
-                        {new Intl.NumberFormat("ar-EG").format(number)}
+                        {new Intl.NumberFormat("en-US").format(number)}
                       </button>
                     ),
                   )}

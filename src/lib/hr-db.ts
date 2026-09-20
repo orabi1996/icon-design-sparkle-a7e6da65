@@ -228,8 +228,8 @@ export function useDeleteRow(table: HrTable) {
   });
 }
 
-export const ar = (n: number) => new Intl.NumberFormat("ar-SA").format(Math.round(n));
-export const money = (n: number) => `${new Intl.NumberFormat("ar-SA").format(Math.round(n))} ر.س`;
+export const ar = (n: number) => new Intl.NumberFormat("en-US").format(Math.round(n));
+export const money = (n: number) => `${new Intl.NumberFormat("en-US").format(Math.round(n))} ر.س`;
 
 /* ============ إعدادات التهيئة العامة (app_settings) ============ */
 

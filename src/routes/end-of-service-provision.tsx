@@ -141,15 +141,14 @@ function unique(values: unknown[]) {
 }
 
 function money(value: unknown) {
-  return new Intl.NumberFormat("ar-SA", {
-    style: "currency",
-    currency: "SAR",
+  return `${new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
+  }).format(Number(value ?? 0))} ر.س`;
 }
 
 function numberAr(value: unknown) {
-  return new Intl.NumberFormat("ar-EG").format(Number(value ?? 0));
+  return new Intl.NumberFormat("en-US").format(Number(value ?? 0));
 }
 
 function dateAr(value: unknown) {
