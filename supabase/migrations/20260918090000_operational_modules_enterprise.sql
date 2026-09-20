@@ -55,7 +55,7 @@ CREATE POLICY employee_correspondence_select_scope ON public.employee_correspond
         public.can_access_resource('correspondence', 'read')
         OR public.can_access_resource('/correspondence', 'read')
         OR employee_id IN (
-          SELECT id FROM public.employees WHERE email = auth.email() OR user_id = auth.uid()
+          SELECT id FROM public.employees WHERE email = auth.email() OR emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid())
         )
       )
     )
@@ -263,7 +263,7 @@ CREATE POLICY disciplinary_inquiries_select_policy ON public.disciplinary_inquir
     public.can_access_resource('inquiries', 'read')
     OR public.can_access_resource('/inquiries', 'read')
     OR employee_id IN (
-      SELECT id FROM public.employees WHERE email = auth.email() OR user_id = auth.uid()
+      SELECT id FROM public.employees WHERE email = auth.email() OR emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid())
     )
   );
 
@@ -314,7 +314,7 @@ CREATE POLICY archived_documents_select_policy ON public.archived_documents
         public.can_access_resource('reports.archive', 'read')
         OR public.can_access_resource('/reports/archive', 'read')
         OR owner_id IN (
-          SELECT id FROM public.employees WHERE email = auth.email() OR user_id = auth.uid()
+          SELECT id FROM public.employees WHERE email = auth.email() OR emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid())
         )
       )
     )

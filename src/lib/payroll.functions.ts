@@ -223,7 +223,12 @@ export const calculatePayrollRunFn = createServerFn({ method: "POST" })
 
     // 2. Fetch Employees & Inputs
     const [{ data: employees }, { data: inputs }] = await Promise.all([
-      db.from("employees").select("*"),
+      db
+        .from("employees")
+        .select(
+          "id, emp_no, full_name, nationality, basic_salary, housing_allowance, transport_allowance, other_allowances, is_gosi_eligible, gosi_basic_override, company_id, status"
+        )
+        .or(`company_id.eq.${data.companyId},company_id.is.null`),
       db.from("payroll_inputs").select("*").eq("run_id", data.runId),
     ]);
 

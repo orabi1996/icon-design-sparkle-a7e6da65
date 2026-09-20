@@ -308,7 +308,11 @@ BEGIN
       EXECUTE format('CREATE POLICY %I_select_policy ON public.%I FOR SELECT TO authenticated USING (
         public.is_permissions_admin()
         OR public.can_access_resource(''/staff'', ''read'')
-        OR (emp_no IS NOT NULL AND emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()))
+        OR (employee_id IS NOT NULL AND employee_id IN (
+          SELECT e.id FROM public.employees e
+          JOIN public.profiles p ON p.emp_no = e.emp_no
+          WHERE p.id = auth.uid()
+        ))
       );', t, t);
 
       EXECUTE format('DROP POLICY IF EXISTS %I_write_policy ON public.%I;', t, t);
@@ -330,7 +334,11 @@ FOR SELECT TO authenticated
 USING (
   public.is_permissions_admin()
   OR public.can_access_resource('/leaves', 'read')
-  OR (emp_no IS NOT NULL AND emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()))
+  OR (employee_id IS NOT NULL AND employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
 );
 
 DROP POLICY IF EXISTS leave_requests_insert_policy ON public.leave_requests;
@@ -339,7 +347,11 @@ FOR INSERT TO authenticated
 WITH CHECK (
   public.is_permissions_admin()
   OR public.can_access_resource('/leaves', 'create')
-  OR (emp_no IS NOT NULL AND emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()))
+  OR (employee_id IS NOT NULL AND employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
 );
 
 DROP POLICY IF EXISTS leave_requests_update_policy ON public.leave_requests;
@@ -348,12 +360,20 @@ FOR UPDATE TO authenticated
 USING (
   public.is_permissions_admin()
   OR public.can_access_resource('/leaves', 'update')
-  OR (emp_no IS NOT NULL AND emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()) AND status = 'pending')
+  OR (employee_id IS NOT NULL AND employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ) AND status = 'pending')
 )
 WITH CHECK (
   public.is_permissions_admin()
   OR public.can_access_resource('/leaves', 'update')
-  OR (emp_no IS NOT NULL AND emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()) AND status = 'pending')
+  OR (employee_id IS NOT NULL AND employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ) AND status = 'pending')
 );
 
 DROP POLICY IF EXISTS leave_requests_delete_policy ON public.leave_requests;
@@ -393,7 +413,11 @@ FOR SELECT TO authenticated
 USING (
   public.is_permissions_admin()
   OR public.can_access_resource('/attendance', 'read')
-  OR (emp_no IS NOT NULL AND emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()))
+  OR (employee_id IS NOT NULL AND employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
 );
 
 DROP POLICY IF EXISTS attendance_write_policy ON public.attendance_records;
@@ -595,8 +619,8 @@ FOR SELECT TO authenticated
 USING (
   public.is_permissions_admin()
   OR public.can_access_resource('/approval-requests', 'read')
-  OR (requester_emp_no IS NOT NULL AND requester_emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()))
-  OR (current_assignee_id = auth.uid())
+  OR (emp_no IS NOT NULL AND emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid()))
+  OR (created_by = auth.uid())
 );
 
 DROP POLICY IF EXISTS approval_requests_write_policy ON public.approval_requests;
@@ -605,12 +629,12 @@ FOR ALL TO authenticated
 USING (
   public.is_permissions_admin()
   OR public.can_access_resource('/approval-requests', 'update')
-  OR (current_assignee_id = auth.uid())
+  OR (created_by = auth.uid())
 )
 WITH CHECK (
   public.is_permissions_admin()
   OR public.can_access_resource('/approval-requests', 'update')
-  OR (current_assignee_id = auth.uid())
+  OR (created_by = auth.uid())
 );
 
 DROP POLICY IF EXISTS tasks_select_policy ON public.tasks;
@@ -619,8 +643,17 @@ FOR SELECT TO authenticated
 USING (
   public.is_permissions_admin()
   OR public.can_access_resource('/tasks/permissions', 'read')
-  OR (creator_id = auth.uid())
-  OR (assignee_id = auth.uid())
+  OR (created_by = auth.uid())
+  OR (assignee_employee_id IS NOT NULL AND assignee_employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
+  OR (creator_employee_id IS NOT NULL AND creator_employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
 );
 
 DROP POLICY IF EXISTS tasks_write_policy ON public.tasks;
@@ -629,14 +662,32 @@ FOR ALL TO authenticated
 USING (
   public.is_permissions_admin()
   OR public.can_access_resource('/tasks/permissions', 'update')
-  OR (creator_id = auth.uid())
-  OR (assignee_id = auth.uid())
+  OR (created_by = auth.uid())
+  OR (assignee_employee_id IS NOT NULL AND assignee_employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
+  OR (creator_employee_id IS NOT NULL AND creator_employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
 )
 WITH CHECK (
   public.is_permissions_admin()
   OR public.can_access_resource('/tasks/permissions', 'update')
-  OR (creator_id = auth.uid())
-  OR (assignee_id = auth.uid())
+  OR (created_by = auth.uid())
+  OR (assignee_employee_id IS NOT NULL AND assignee_employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
+  OR (creator_employee_id IS NOT NULL AND creator_employee_id IN (
+    SELECT e.id FROM public.employees e
+    JOIN public.profiles p ON p.emp_no = e.emp_no
+    WHERE p.id = auth.uid()
+  ))
 );
 
 -- 6. Seed Email Permissions in permission_features

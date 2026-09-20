@@ -27,9 +27,6 @@ ALTER TABLE public.security_audit_logs
 -- 2. Performance & Coverage Composite Indexes for High-Volume Reporting
 
 -- A. Attendance Records High-Volume Coverage Indexes
-CREATE INDEX IF NOT EXISTS idx_attendance_records_date_branch_dept 
-  ON public.attendance_records (work_date DESC, branch, department);
-
 CREATE INDEX IF NOT EXISTS idx_attendance_records_employee_date 
   ON public.attendance_records (employee_id, work_date DESC);
 
@@ -40,16 +37,13 @@ CREATE INDEX IF NOT EXISTS idx_attendance_records_late_filtered
 CREATE INDEX IF NOT EXISTS idx_attendance_records_status_date 
   ON public.attendance_records (status, work_date DESC);
 
--- B. Payroll Items Composite Reporting Indexes
-CREATE INDEX IF NOT EXISTS idx_payroll_items_run_branch_dept 
-  ON public.payroll_items (payroll_run_id, branch, department);
-
-CREATE INDEX IF NOT EXISTS idx_payroll_items_employee_run 
-  ON public.payroll_items (employee_id, payroll_run_id);
+-- B. Payroll Results Composite Reporting Indexes
+CREATE INDEX IF NOT EXISTS idx_payroll_results_employee_run 
+  ON public.payroll_results (employee_id, run_id);
 
 -- C. Loan Transactions Ledger Index
 CREATE INDEX IF NOT EXISTS idx_loan_transactions_loan_type_date 
-  ON public.loan_transactions (loan_id, transaction_type, transaction_date DESC);
+  ON public.loan_transactions (loan_id, transaction_type, created_at DESC);
 
 -- D. Employees Status and Org Scoping Index
 CREATE INDEX IF NOT EXISTS idx_employees_status_branch_dept 
@@ -57,7 +51,7 @@ CREATE INDEX IF NOT EXISTS idx_employees_status_branch_dept
 
 -- E. Leave Requests Date and Status Range Index
 CREATE INDEX IF NOT EXISTS idx_leave_requests_dates_status 
-  ON public.leave_requests (start_date, end_date, status);
+  ON public.leave_requests (from_date, to_date, status);
 
 -- 3. Live Data Quality & Reconciliation Diagnostic View
 -- Detects and surfaces orphan records, missing links, and discrepancies
@@ -114,10 +108,11 @@ SELECT
     'employee_id', a.employee_id,
     'work_date', a.work_date,
     'check_in', a.check_in,
-    'branch', a.branch
+    'branch', e.branch
   ) AS details,
   now() AS detected_at
 FROM public.attendance_records a
+LEFT JOIN public.employees e ON e.id = a.employee_id
 WHERE a.work_date < CURRENT_DATE
   AND a.check_in IS NOT NULL 
   AND a.check_out IS NULL 

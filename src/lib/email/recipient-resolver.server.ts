@@ -100,10 +100,37 @@ export async function resolveApproverEmails(
       if (!managerName && options.employeeId) {
         const { data: emp } = await db
           .from("employees")
-          .select("manager_name")
+          .select("manager_name, department_id, department")
           .eq("id", options.employeeId)
           .maybeSingle();
         managerName = emp?.manager_name;
+
+        // Prefer authoritative department manager relation if available
+        if (emp?.department_id) {
+          const { data: dept } = await db
+            .from("departments")
+            .select("manager_id")
+            .eq("id", emp.department_id)
+            .maybeSingle();
+          if (dept?.manager_id) {
+            const { data: manager } = await db
+              .from("employees")
+              .select("id, full_name, emp_no, email, private_email")
+              .eq("id", dept.manager_id)
+              .maybeSingle();
+            if (manager) {
+              const email = manager.email?.trim() || manager.private_email?.trim() || null;
+              return [
+                {
+                  email,
+                  name: manager.full_name,
+                  empNo: manager.emp_no,
+                  role: "المدير المباشر",
+                },
+              ];
+            }
+          }
+        }
       }
 
       if (managerName) {

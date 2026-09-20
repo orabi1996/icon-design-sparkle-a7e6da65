@@ -46,10 +46,11 @@ const employeeSchema = z.object({
   email: z.string().trim().email("صيغة البريد الإلكتروني غير صحيحة").optional().nullable().or(z.literal("")),
   gender: z.string().default("ذكر"),
   nationality: z.string().default("سعودي"),
+  version: z.number().int().positive().optional(),
 });
 
 /**
- * List employees with tenant scoping and dynamic masking of sensitive data.
+ * List employees with tenant scoping, pagination, and dynamic masking of sensitive data.
  */
 export const listEmployeesFn = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -62,6 +63,9 @@ export const listEmployeesFn = createServerFn({ method: "POST" })
         status: z.string().optional(),
         branchId: z.string().uuid().optional(),
         departmentId: z.string().uuid().optional(),
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(500).default(50),
+        cursor: z.string().optional(),
       })
       .parse(input);
   })
@@ -78,12 +82,16 @@ export const listEmployeesFn = createServerFn({ method: "POST" })
 
     let query = db
       .from("employees")
-      .select("*")
+      .select("id, tenant_id, company_id, emp_no, full_name, national_id, iban, basic_salary, allowances, employment_status, status, branch, department, job_title, version, updated_at")
       .or(`tenant_id.eq.${data.tenantId},tenant_id.is.null`)
       .order("emp_no", { ascending: true });
 
     if (data.companyId) {
       query = query.or(`company_id.eq.${data.companyId},company_id.is.null`);
+    }
+
+    if (data.status) {
+      query = query.eq("status", data.status);
     }
 
     if (data.branchId) {
@@ -92,6 +100,14 @@ export const listEmployeesFn = createServerFn({ method: "POST" })
 
     if (data.departmentId) {
       query = query.eq("department_id", data.departmentId);
+    }
+
+    if (data.cursor) {
+      query = query.gt("emp_no", data.cursor).limit(data.pageSize);
+    } else {
+      const from = (data.page - 1) * data.pageSize;
+      const to = from + data.pageSize - 1;
+      query = query.range(from, to);
     }
 
     const { data: rows, error } = await query;
@@ -162,13 +178,40 @@ export const saveEmployeeFn = createServerFn({ method: "POST" })
     const actor = await requirePermission(context, "/staff", action);
     const db = await getAdminDb();
 
-    // Fetch existing employees for uniqueness validation
-    const { data: existing, error: fetchErr } = await db
-      .from("employees")
-      .select("id, emp_no")
-      .eq("company_id", data.companyId);
+    // 1. High-Performance Targeted Uniqueness Check (Replaces O(N) full-table scan)
+    if (data.empNo) {
+      const { data: conflict, error: conflictErr } = await db
+        .from("employees")
+        .select("id, emp_no")
+        .eq("company_id", data.companyId)
+        .eq("emp_no", data.empNo)
+        .maybeSingle();
 
-    if (fetchErr) throw new Error(fetchErr.message);
+      if (conflictErr) throw new Error(conflictErr.message);
+      if (conflict && conflict.id !== data.id) {
+        throw new Error(`الرقم الوظيفي (${data.empNo}) مستخدم بالفعل لموظف آخر`);
+      }
+    }
+
+    // 2. Optimistic Concurrency Control (OCC)
+    let nextVersion = 1;
+    if (data.id) {
+      const { data: currentEmp, error: currentErr } = await db
+        .from("employees")
+        .select("id, version")
+        .eq("id", data.id)
+        .single();
+
+      if (currentErr || !currentEmp) {
+        throw new Error("الموظف المراد تحديثه غير موجود");
+      }
+
+      if (data.version !== undefined && data.version !== currentEmp.version) {
+        throw new Error("409 Conflict: تم تعديل بيانات الموظف بواسطة مستخدم آخر. يرجى تحديث الصفحة والمحاولة مجددًا.");
+      }
+
+      nextVersion = (currentEmp.version || 1) + 1;
+    }
 
     const validation = validateEmployee(
       {
@@ -193,7 +236,7 @@ export const saveEmployeeFn = createServerFn({ method: "POST" })
         gender: data.gender,
         nationality: data.nationality,
       },
-      (existing ?? []) as EmployeeEntity[]
+      [] // Uniqueness pre-validated above via targeted index lookup
     );
 
     if (!validation.isValid) {
@@ -226,6 +269,7 @@ export const saveEmployeeFn = createServerFn({ method: "POST" })
       email: norm["email"] || null,
       gender: norm["gender"] || "ذكر",
       nationality: norm["nationality"] || "سعودي",
+      version: nextVersion,
       updated_at: new Date().toISOString(),
     };
 

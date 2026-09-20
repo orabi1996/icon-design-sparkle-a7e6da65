@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.loan_transactions (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   loan_id uuid NOT NULL REFERENCES public.loans(id) ON DELETE CASCADE,
   employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
-  company_id uuid REFERENCES public.companies(id) ON DELETE CASCADE,
+  company_id uuid REFERENCES public.hr_company_profiles(id) ON DELETE CASCADE,
   transaction_type text NOT NULL CHECK (
     transaction_type IN ('disbursement', 'installment', 'manual_payment', 'payroll_deduction', 'adjustment', 'reversal')
   ),
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS public.eos_settlements (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   request_id uuid REFERENCES public.end_of_service_requests(id) ON DELETE SET NULL,
   employee_id uuid NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
-  company_id uuid REFERENCES public.companies(id) ON DELETE CASCADE,
+  company_id uuid REFERENCES public.hr_company_profiles(id) ON DELETE CASCADE,
   settlement_number text NOT NULL UNIQUE,
   service_start_date date NOT NULL,
   last_working_date date NOT NULL,
@@ -177,7 +177,7 @@ CREATE POLICY loan_transactions_select_policy ON public.loan_transactions
     public.can_access_resource('loans', 'read')
     OR public.can_access_resource('/loans', 'read')
     OR employee_id IN (
-      SELECT id FROM public.employees WHERE email = auth.email() OR user_id = auth.uid()
+      SELECT id FROM public.employees WHERE email = auth.email() OR emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid())
     )
   );
 
@@ -197,7 +197,7 @@ CREATE POLICY eos_settlements_select_policy ON public.eos_settlements
     public.can_access_resource('end-of-service-requests', 'read')
     OR public.can_access_resource('/end-of-service-requests', 'read')
     OR employee_id IN (
-      SELECT id FROM public.employees WHERE email = auth.email() OR user_id = auth.uid()
+      SELECT id FROM public.employees WHERE email = auth.email() OR emp_no = (SELECT p.emp_no FROM public.profiles p WHERE p.id = auth.uid())
     )
   );
 

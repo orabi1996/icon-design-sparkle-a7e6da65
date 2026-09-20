@@ -7,6 +7,7 @@ import { AppShell } from "@/components/hr/AppShell";
 import { Breadcrumbs, Btn, Card, Chip, PageBanner } from "@/components/hr/ui";
 import { useRows, type Row } from "@/lib/hr-db";
 import { supabase } from "@/integrations/supabase/client";
+import { sendCorrespondenceFn } from "@/lib/operational-domains.functions";
 
 export const Route = createFileRoute("/correspondence")({
   head: () => ({
@@ -519,8 +520,27 @@ function CorrespondencePage() {
   }
 
   async function insertCorrespondence(values: Record<string, unknown>) {
-    const { error } = await correspondenceDb.from("employee_correspondence").insert(values);
-    if (error) throw error;
+    try {
+      await sendCorrespondenceFn({
+        data: {
+          directionType: values["channel"] === "internal" ? "internal" : "outgoing",
+          confidentiality: "normal",
+          classification: String(values["channel"] || "general"),
+          subject: String(values["subject"] || "مراسلة إدارية"),
+          message: String(values["message"] || ""),
+          recipientEmail: values["recipient_email"] ? String(values["recipient_email"]) : undefined,
+          employeeId: values["employee_id"] ? String(values["employee_id"]) : undefined,
+          employeeName: values["employee_name"] ? String(values["employee_name"]) : undefined,
+          branch: values["branch"] ? String(values["branch"]) : undefined,
+          department: values["department"] ? String(values["department"]) : undefined,
+          attachmentName: values["attachment_name"] ? String(values["attachment_name"]) : undefined,
+          attachmentPath: values["attachment_path"] ? String(values["attachment_path"]) : undefined,
+        },
+      });
+    } catch {
+      const { error } = await correspondenceDb.from("employee_correspondence").insert(values);
+      if (error) throw error;
+    }
     await queryClient.invalidateQueries({ queryKey: ["employee_correspondence"] });
   }
 

@@ -9,6 +9,7 @@ import { money, useRows, useSaveRow, type Row } from "@/lib/hr-db";
 import { notifyWorkflow } from "@/lib/email/dispatcher";
 import { supabase } from "@/integrations/supabase/client";
 import { calculateLoanLedgerBalance, roundCurrency } from "@/lib/loans-eos-core.mjs";
+import { recordLoanTransactionFn } from "@/lib/loans-eos.functions";
 
 export const Route = createFileRoute("/loans")({
   head: () => ({
@@ -411,38 +412,26 @@ function RepayTab() {
     const inst = Number(r["monthly_amount"] ?? 0);
     if (inst <= 0) { toast.error("قيمة القسط الشهري غير محددة"); return; }
 
-    // Fetch existing transactions from ledger to get authoritative balance
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const anyDb = supabase as any;
-    const { data: txs = [] } = await anyDb
-      .from("loan_transactions")
-      .select("*")
-      .eq("loan_id", loanId);
-
-    const balance = calculateLoanLedgerBalance((txs as Record<string, unknown>[]) || [], approved);
-    const payAmt = Math.min(inst, balance.outstandingBalance);
-    if (payAmt <= 0) { toast.error("السلفة مسددة بالكامل بالفعل"); return; }
-
-    const newBal = roundCurrency(balance.outstandingBalance - payAmt);
     const idempotencyKey = `manual:installment:${loanId}:${Date.now()}`;
 
-    // Append to immutable ledger
-    await anyDb.from("loan_transactions").insert({
-      loan_id: loanId,
-      employee_id: r["employee_id"],
-      transaction_type: "installment",
-      direction: "credit",
-      amount: payAmt,
-      balance_after: newBal,
-      idempotency_key: idempotencyKey,
-      notes: "سداد قسط يدوي من شاشة السلف",
-    });
+    try {
+      const res = await recordLoanTransactionFn({
+        data: {
+          loanId,
+          transactionType: "installment",
+          amount: inst,
+          idempotencyKey,
+          notes: "سداد قسط يدوي من شاشة السلف",
+        },
+      });
 
-    await save.mutateAsync({
-      id: loanId,
-      paid_amount: roundCurrency(approved - newBal),
-      status: newBal <= 0 ? "مسددة" : "قيد السداد",
-    });
+      if (res?.success) {
+        toast.success(res.isSettled ? "تم سداد القسط وإقفال السلفة بالكامل" : "تم تسجيل سداد القسط بنجاح");
+        await save.mutateAsync({ id: loanId });
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "فشل تسجيل سداد القسط");
+    }
   };
 
   const payAll = async () => {

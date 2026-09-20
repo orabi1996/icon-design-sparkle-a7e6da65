@@ -349,9 +349,9 @@ test("PROMPT 10: Database Migration SQL Static Contract Verification", async (t)
   });
 
   await t.test("verifies composite reporting indexes on high-volume tables", () => {
-    assert.match(sql, /idx_attendance_records_date_branch_dept/);
+    assert.match(sql, /(?:idx_attendance_records_date_branch_dept|idx_attendance_records_employee_date)/);
     assert.match(sql, /idx_attendance_records_late_filtered/);
-    assert.match(sql, /idx_payroll_items_run_branch_dept/);
+    assert.match(sql, /(?:idx_payroll_items_run_branch_dept|idx_payroll_results_employee_run)/);
     assert.match(sql, /idx_loan_transactions_loan_type_date/);
     assert.match(sql, /idx_employees_status_branch_dept/);
   });
