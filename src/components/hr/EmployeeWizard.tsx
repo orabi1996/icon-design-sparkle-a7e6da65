@@ -854,6 +854,20 @@ export function EmployeeWizard() {
 
   return (
     <div className="mt-4" dir="rtl">
+      <AlertDialog open={!!dupAlert} onOpenChange={(o) => !o && setDupAlert(null)}>
+        <AlertDialogContent dir="rtl" className="text-right">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">تنبيه: يوجد تشابه في بيانات الموظف</AlertDialogTitle>
+            <AlertDialogDescription className="text-right leading-7">
+              {dupAlert?.field} موجود بالفعل داخل النظام على الموظف{" "}
+              <b>{dupAlert?.name}</b> (الرقم الوظيفي {dupAlert?.empNo}). لا يمكن إضافة موظف ببيانات مكررة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>حسنًا</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Breadcrumbs trail={["عمليات شؤون الموظفين", "شؤون الموظفين", "إضافة موظف"]} />
 
       <div className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-5 shadow-sm">
