@@ -1,3 +1,4 @@
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import {
   useEffect,
   useMemo,
@@ -378,6 +379,7 @@ export function EmployeeWizard() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
+  const [dupAlert, setDupAlert] = useState<{ field: string; name: string; empNo: string } | null>(null);
 
   const departmentOptions = useMemo(
     () => departments.map((row) => String(row["name"] ?? "")).filter(Boolean),
@@ -430,6 +432,23 @@ export function EmployeeWizard() {
   };
 
   const validateStep = (index: number) => {
+    if (index === 0) {
+      const norm = (s: unknown) => String(s ?? "").trim().replaceAll(/\s+/g, " ").toLowerCase();
+      const nidIn = String(form.national_id ?? "").trim();
+      const byId = nidIn ? employees.find((e) => String(e["national_id"] ?? "").trim() === nidIn) : undefined;
+      const byName = norm(form.full_name)
+        ? employees.find((e) => norm(e["full_name"]) === norm(form.full_name))
+        : undefined;
+      const dup = byId ?? byName;
+      if (dup) {
+        setDupAlert({
+          field: byId ? `رقم الهوية ${nidIn}` : `الاسم "${String(form.full_name).trim()}"`,
+          name: String(dup["full_name"] ?? "—"),
+          empNo: String(dup["emp_no"] ?? "—"),
+        });
+        return false;
+      }
+    }
     const missing = (requiredByStep[index] ?? []).filter((key) => {
       const value = form[key];
       if (typeof value === "number") return value <= 0;
@@ -836,6 +855,20 @@ export function EmployeeWizard() {
 
   return (
     <div className="mt-4" dir="rtl">
+      <AlertDialog open={!!dupAlert} onOpenChange={(o) => !o && setDupAlert(null)}>
+        <AlertDialogContent dir="rtl" className="text-right">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-right">تنبيه: يوجد تشابه في بيانات الموظف</AlertDialogTitle>
+            <AlertDialogDescription className="text-right leading-7">
+              {dupAlert?.field} موجود بالفعل داخل النظام على الموظف{" "}
+              <b>{dupAlert?.name}</b> (الرقم الوظيفي {dupAlert?.empNo}). لا يمكن إضافة موظف ببيانات مكررة.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction>حسنًا</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Breadcrumbs trail={["عمليات شؤون الموظفين", "شؤون الموظفين", "إضافة موظف"]} />
 
       <div className="mt-3 rounded-md border border-slate-200 bg-white px-3 py-5 shadow-sm">
