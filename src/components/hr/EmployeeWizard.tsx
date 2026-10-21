@@ -378,6 +378,7 @@ export function EmployeeWizard() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [contractFile, setContractFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState("");
+  const [dupAlert, setDupAlert] = useState<{ field: string; name: string; empNo: string } | null>(null);
 
   const departmentOptions = useMemo(
     () => departments.map((row) => String(row["name"] ?? "")).filter(Boolean),
@@ -438,6 +439,23 @@ export function EmployeeWizard() {
     if (missing.length) {
       toast.error("يرجى استكمال: " + missing.map((key) => labels[key] ?? key).join("، "));
       return false;
+    }
+    if (index === 0) {
+      const norm = (s: unknown) => String(s ?? "").trim().replaceAll(/\s+/g, " ").toLowerCase();
+      const nidIn = String(form.national_id ?? "").trim();
+      const byId = nidIn ? employees.find((e) => String(e["national_id"] ?? "").trim() === nidIn) : undefined;
+      const byName = norm(form.full_name)
+        ? employees.find((e) => norm(e["full_name"]) === norm(form.full_name))
+        : undefined;
+      const dup = byId ?? byName;
+      if (dup) {
+        setDupAlert({
+          field: byId ? `رقم الهوية ${nidIn}` : `الاسم "${String(form.full_name).trim()}"`,
+          name: String(dup["full_name"] ?? "—"),
+          empNo: String(dup["emp_no"] ?? "—"),
+        });
+        return false;
+      }
     }
     if (index === 0 && form.national_id) {
       const nid = String(form.national_id).trim();
