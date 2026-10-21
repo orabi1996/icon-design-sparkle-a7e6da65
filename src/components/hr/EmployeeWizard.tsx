@@ -431,15 +431,6 @@ export function EmployeeWizard() {
   };
 
   const validateStep = (index: number) => {
-    const missing = (requiredByStep[index] ?? []).filter((key) => {
-      const value = form[key];
-      if (typeof value === "number") return value <= 0;
-      return !String(value ?? "").trim();
-    });
-    if (missing.length) {
-      toast.error("يرجى استكمال: " + missing.map((key) => labels[key] ?? key).join("، "));
-      return false;
-    }
     if (index === 0) {
       const norm = (s: unknown) => String(s ?? "").trim().replaceAll(/\s+/g, " ").toLowerCase();
       const nidIn = String(form.national_id ?? "").trim();
@@ -456,6 +447,15 @@ export function EmployeeWizard() {
         });
         return false;
       }
+    }
+    const missing = (requiredByStep[index] ?? []).filter((key) => {
+      const value = form[key];
+      if (typeof value === "number") return value <= 0;
+      return !String(value ?? "").trim();
+    });
+    if (missing.length) {
+      toast.error("يرجى استكمال: " + missing.map((key) => labels[key] ?? key).join("، "));
+      return false;
     }
     if (index === 0 && form.national_id) {
       const nid = String(form.national_id).trim();
