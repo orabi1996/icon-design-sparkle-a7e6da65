@@ -224,6 +224,15 @@ export function validateEmployee(employee, existingEmployees = []) {
   } else if (fullName.length < 2 || fullName.length > 200) {
     errors.full_name = "اسم الموظف يجب أن يتراوح بين حرفين و 200 حرف";
   }
+  if (fullName && !errors.full_name) {
+    const norm = (s) => String(s || "").trim().replaceAll(/\s+/g, " ").toLowerCase();
+    const dupName = existingEmployees.find((e) => e.id !== employee.id && norm(e.full_name) === norm(fullName));
+    if (dupName) errors.full_name = `يوجد تشابه مع بيانات موظف آخر: الاسم "${fullName}" مسجل للموظف رقم ${dupName.emp_no || "—"}`;
+  }
+  if (nationalId) {
+    const dupId = existingEmployees.find((e) => e.id !== employee.id && String(e.national_id || "").trim() === nationalId);
+    if (dupId) errors.national_id_duplicate = `يوجد تشابه مع بيانات موظف آخر: رقم الهوية ${nationalId} مسجل للموظف "${dupId.full_name || "—"}"`;
+  }
 
   // National ID / Iqama validation
   if (nationalId) {
